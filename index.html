@@ -228,7 +228,7 @@ function student(o,t,fn,ln,cid,cname){
     clearTimeout(timer);run();ref.update({...pay(true),st:'submitted',sub:Date.now(),auto:null,grade:null,fb:null})};
   const leave=()=>{clearTimeout(timer);F[cur]=ed.get();conn.off();tref.off('value',onTask);ref.off('value',onVal);removeEventListener('message',onMsg);
     ref.child('on').onDisconnect().cancel();ref.update({...pay(true),on:false});home()};
-  $app.append(el('header',{},el('b',{},'👤 '+fn+' '+ln),el('span',{class:'mu'},'🏫 '+cname),status,cbtn,sb,el('button',{class:'g',onclick:leave},'Вийти')),task,res,
+  $app.append(el('header',{},el('b',{},'👤 '+fn+' '+ln),el('span',{class:'mu'},'🏫 '+cname),status,cbtn,sb,el('button',{class:'g',onclick:leave},'Вийти')),task,res);
     el('div',{class:'ws'},el('div',{class:'pane'},fbar,el('div',{class:'tabs'},tpl,rb,el('label',{class:'mu'},ac,' автооновлення'),el('span',{class:'mu'},'Підключення: <link rel="stylesheet" href="style.css"> і <script src="script.js"></script>')),ed.host),el('div',{class:'pane'},pv,con)),cw);
   ref.once('value').then(s=>{const v=s.val();if(v)F=filesOf(v);
     Object.keys(F).forEach(n=>ed.sync(n,F[n]));cur='index.html';ed.show(cur);drawF();run();
