@@ -24,6 +24,12 @@
         ".write": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'password'"
       }
     },
+    "timg": {
+      "$uid": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'password'"
+      }
+    },
     "journal": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'password'",
@@ -117,6 +123,54 @@
           "out": {
             ".write": "auth != null && data.parent().child('u').val() === auth.uid",
             ".validate": "newData.isString() && newData.val().length <= 4000"
+          }
+        }
+      }
+    },
+    "collab": {
+      "owners": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'password'"
+        }
+      },
+      "rooms": {
+        "$r": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider === 'password' && (!data.exists() || data.child('owner').val() === auth.uid) && (!newData.exists() || newData.child('owner').val() === auth.uid)",
+          "students": {
+            "$u": {
+              ".write": "auth != null && auth.uid === $u",
+              ".validate": "newData.hasChildren(['ln','fn'])",
+              "ln": {
+                ".validate": "newData.isString() && newData.val().length <= 40"
+              },
+              "fn": {
+                ".validate": "newData.isString() && newData.val().length <= 40"
+              },
+              "on": {
+                ".validate": "newData.isBoolean()"
+              },
+              "at": {
+                ".validate": "newData.isNumber()"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "cur": {
+            "$u": {
+              ".write": "auth != null && auth.uid === $u && (!newData.exists() || root.child('collab/rooms/'+$r+'/owner').val() === auth.uid || (root.child('collab/rooms/'+$r+'/perm/u/'+auth.uid).val() === true || (root.child('collab/rooms/'+$r+'/perm/all').val() === true && root.child('collab/rooms/'+$r+'/perm/u/'+auth.uid).val() !== false)))"
+            }
+          },
+          "log": {
+            "$s": {
+              "$k": {
+                ".write": "auth != null && !data.exists() && newData.child('u').val() === auth.uid && $s === root.child('collab/rooms/'+$r+'/active/sid').val() && (root.child('collab/rooms/'+$r+'/perm/u/'+auth.uid).val() === true || (root.child('collab/rooms/'+$r+'/perm/all').val() === true && root.child('collab/rooms/'+$r+'/perm/u/'+auth.uid).val() !== false))",
+                ".validate": "newData.hasChildren(['u','t0','e']) && newData.child('e').isString() && newData.child('e').val().length <= 200000"
+              }
+            }
           }
         }
       }
