@@ -67,16 +67,16 @@ function cabinet(uid,prof){
   const mOn=i=>{mOff();const s0=sel;mref=db.ref('code/'+s0+'/'+i);mfn=x=>{if(sel!==s0)return;const v=x.val(),C=CODE[i]||{};CODE[i]={F:v&&v.files?filesOf(v,mainF()):null,u:data[i]?data[i].upd:0,at:Date.now(),v:(C.v||0)+1};modal._cv=(modal._cv||0)+1;render()};
     mref.on('value',mfn,()=>{CODE[i]={...(CODE[i]||{}),den:true}})};
   setInterval(()=>{if(!sel||!showGrid())return;Object.keys(cards).forEach(i=>{if(vis(i)&&i!==open)pull(i)})},1500);
-  const tsel=el('select',{style:'width:auto'});[[10,'кожні 10 с'],[30,'кожні 30 с'],[60,'щохвилини'],[0,'лише вручну']].forEach(([v,t])=>tsel.append(el('option',{value:v},t)));tsel.value=tiv;
+  const tsel=el('select',{style:'width:auto;flex:0 0 auto'});[[10,'кожні 10 с'],[30,'кожні 30 с'],[60,'щохвилини'],[0,'лише вручну']].forEach(([v,t])=>tsel.append(el('option',{value:v},t)));tsel.value=tiv;
   tsel.onchange=()=>{tiv=+tsel.value;try{localStorage.setItem('kk_tiv',tiv)}catch(e){}};
-  const tctl=el('div',{class:'row',style:'padding:0 16px;align-items:center;gap:8px;flex-wrap:wrap;display:none'},el('span',{class:'mu',style:'flex:0 0 auto'},'🔄 Оновлення мініатюр коду:'),tsel,
+  const tctl=el('div',{class:'row tctl',style:'padding:0 16px;align-items:center;gap:8px;flex-wrap:wrap;display:none'},el('span',{class:'mu',style:'flex:0 0 auto'},'🔄 Оновлення мініатюр коду:'),tsel,
     el('button',{class:'g',style:'flex:0 0 auto',onclick:()=>Object.keys(cards).forEach(i=>{CODE[i]={...(CODE[i]||{}),want:true}})},'Оновити зараз'),
     el('span',{class:'mu',style:'flex:1 1 220px'},'Рідше — менше трафіку бази. Відкритий учень завжди оновлюється наживо.'));
   let tasks={},classes={},sel=null,creating=false,data={},open=null,cards={},cur='all',prev={},pc={},ph={},pl={},pw={},pp={},phs={},ready=false,quiet=0,wref=null,wfn=null,pkey='';
   const tref=db.ref('tasks/'+uid),cref=db.ref('classes/'+uid),wk=i=>db.ref('works/'+sel+'/'+i),base=location.href.split(/[?#]/)[0];
   const who=[prof.last,prof.first,prof.middle].filter(Boolean).join(' ')||prof.login||'Вчитель';
-  const tbar=el('div',{class:'chips tbar'}),panel=el('div',{}),chips=el('div',{class:'chips'}),grid=el('div',{class:'grid'}),toasts=el('div',{class:'toasts'}),
-    empty=el('div',{class:'mu',style:'padding:0 16px 16px'},'Поки що немає підключених учнів.'),modal=el('div',{class:'modal',style:'display:none'});
+  const tbar=el('div',{class:'chips tbar'}),panel=el('div',{}),chips=el('div',{class:'clist'}),vbar=el('div',{class:'vbar'}),grid=el('div',{class:'grid'}),toasts=el('div',{class:'toasts'}),
+    empty=el('div',{class:'mu empty',style:'padding:0 16px 16px'},'Поки що немає підключених учнів.'),modal=el('div',{class:'modal',style:'display:none'});
   let off=0;db.ref('.info/serverTimeOffset').on('value',s=>{off=s.val()||0});const tnow=()=>Date.now()+off;let fired='';
   const T=()=>tasks[sel]||null,cname=k=>(classes[k]&&classes[k].name)||'';
   const locked=()=>Object.values(tasks).some(t=>t.status==='active');
@@ -310,7 +310,7 @@ function cabinet(uid,prof){
         trk:ai.checked||wi.checked||li.checked,wrn:wi.checked,wn:Math.max(1,Math.min(50,parseInt(wn.value)||3)),lck:li.checked,pst:xi.checked||xb.checked,pstb:xb.checked,psn:Math.max(5,Math.min(500,parseInt(xn.value)||20)),
         tests:ty.value==='py'?TS.filter(t=>t.i.trim()||t.o.trim()).map(t=>({i:t.i,o:t.o,h:!!t.h})):null,tmode:ty.value==='py'?tmo.value:null,tlim:ty.value==='py'?Math.max(1,Math.min(30,+tli.value||5)):null,checks:ty.value==='web'&&cRules().length?cRules():null,rub:rbx.get(),hints:hbx.get(),hmode:hmo.value,vars:vbx.get(),vmode:vmo.value})}};
   const kPanel=()=>{const t=T();return [sel,creating,t&&rlist(t).length,t&&hlist(t).length,t&&vlist(t).length,t&&t.status,t&&t.arch&&t.arch.at,t&&t.code,t&&t.endsAt,t&&t.cls,Object.keys(tasks).length,Object.keys(classes).length].join('|')};
-  const drawPanel=()=>{panel.textContent='';panel._dc=null;panel._tm=null;pkey=kPanel();const t=T();
+  const drawPanel=()=>{panel.textContent='';place(mainc);panel._dc=null;panel._tm=null;pkey=kPanel();const t=T();
     if(!creating&&!t){const a=Object.keys(tasks).find(k=>tasks[k].status==='active');
       panel.append(el('div',{class:'tp'},el('div',{class:'mu'},a?'🟢 Зараз виконується завдання «'+tasks[a].title+'». Оберіть його у списку, щоб побачити роботу учнів.':Object.keys(tasks).length?'Оберіть завдання зі списку або створіть нове кнопкою «＋ Нове завдання».':'Створіть перше завдання кнопкою «＋ Нове завдання».')));return}
     if(creating){const ti=el('input',{placeholder:'Назва завдання (напр. «Практична 3. Списки»)'}),tx=el('textarea',{rows:5,placeholder:'Текст завдання для учнів…'}),mk=el('button',{},'Створити завдання');
@@ -326,28 +326,31 @@ function cabinet(uid,prof){
       s.onchange=()=>{const k=s.value;tref.child(sel).update(k?{cls:k,cn:classes[k].name}:{cls:null,cn:null});cur=k||'all';drawChips();apply();updAbs()};
       return el('div',{class:'row',style:'align-items:center'},el('b',{style:'flex:0 0 auto'},'🏫 Клас, для якого задається завдання:'),s,Object.keys(classes).length?'':el('span',{class:'mu'},'Спочатку додайте клас кнопкою «＋ Додати клас» і створіть його список учнів.'))})()
       :el('div',{class:'mu'},'🏫 Клас: '+(cname(t.cls)||t.cn||'не вказано (старе завдання)'));
-    const acts=[];
-    if(!t.code)acts.push(el('button',{onclick:async()=>{try{await tref.child(sel).update({code:await mkCode(sel)})}catch(e){alert('Не вдалося згенерувати код')}}},'🔑 Згенерувати код'));
-    if(dr&&t.code)acts.push(el('button',{onclick:()=>{{const o=ou.get(),c=t.cls,K=c&&classes[c];
+    const G={go:[],live:[],chk:[],mng:[]};
+    if(!t.code)G.go.push(el('button',{onclick:async()=>{try{await tref.child(sel).update({code:await mkCode(sel)})}catch(e){alert('Не вдалося згенерувати код')}}},'🔑 Згенерувати код'));
+    if(dr&&t.code)G.go.push(el('button',{class:'big',onclick:()=>{{const o=ou.get(),c=t.cls,K=c&&classes[c];
       if(!K)return alert('Оберіть клас, для якого задається завдання.');
       if(!K.roster||!Object.keys(K.roster).length)return alert('У класу «'+K.name+'» немає списку учнів: учні не зможуть увійти. Створіть список кнопкою «👥 Список класу».');
       if(confirm('Відправити завдання класу «'+K.name+'»?\nПісля цього перемикання між завданнями буде заблоковано, доки ви його не завершите.'+(o.timerOn?'\nТаймер: '+o.mins+' хв почнеться одразу.':'')))tref.child(sel).update({title:tt.value.trim()||t.title,text:tx.value,...o,cls:c,cn:K.name,status:'active',started:Date.now(),endsAt:o.timerOn?tnow()+o.mins*60000:null})}}},'▶ Відправити учням'));
-    if(!dr)acts.push(el('button',{class:'g',onclick:openHints},'💡 Підказки ('+hlist(t).length+')'));
-    if(vlist(t).length)acts.push(el('button',{class:'g',onclick:openVars},'🔀 Варіанти ('+vlist(t).length+')'));
-    if(!dr)acts.push(el('button',{class:'g',onclick:openRub},rlist(t).length?'📊 Критерії оцінювання ('+rlist(t).length+')':'📊 Додати критерії оцінювання'));
-    if(t.status!=='active')acts.push(el('button',{class:'g',onclick:copyTask},'📋 Копіювати завдання'),el('button',{class:'g',onclick:delTask},'🗑 Видалити завдання'));
-    else{const b=el('button',{class:'g',title:'Спочатку завершіть завдання'},'🗑 Видалити завдання');b.disabled=true;acts.push(b)}
-    if(t.status==='active'&&t.endsAt)acts.push(el('button',{class:'g',onclick:()=>tref.child(sel).update({endsAt:t.endsAt+300000})},'＋5 хв'));
-    if(t.ttype==='py'&&!t.pyk&&tAny(t)&&t.status!=='draft')acts.push(el('button',{class:'g','data-bt':'1',onclick:e=>batchTests(e.target)},bRun?'🧪 Перевіряю…':'🧪 Перевірити всіх тестами'));
-    if(t.ttype!=='py'&&clist(t).length&&t.status!=='draft')acts.push(el('button',{class:'g','data-bt':'1',onclick:e=>batchTests(e.target)},bRun?'☑ Перевіряю…':'☑ Перевірити вимоги в усіх'));
-    if(t.status==='active')acts.push(el('button',{style:'background:#dc2626',onclick:()=>finish(false)},t.endsAt?'⏹ Завершити достроково для всіх':'⏹ Завершити для всіх учнів'));
-    if(t.status==='finished'){const dc=el('button',{class:'g',onclick:delChecked},'');panel._dc=dc;acts.push(dc,el('button',{class:'g',title:'Зберегти всі роботи у файл архіву й видалити їх з бази',onclick:e=>arDo([sel],e.target)},'📦 Архівувати роботи'),el('button',{onclick:again},'♻ Задати знову'))}
+    if(!dr)G.live.push(el('button',{class:'g',onclick:openHints},'💡 Підказки ('+hlist(t).length+')'));
+    if(vlist(t).length)G.live.push(el('button',{class:'g',onclick:openVars},'🔀 Варіанти ('+vlist(t).length+')'));
+    if(!dr)G.chk.push(el('button',{class:'g',onclick:openRub},rlist(t).length?'📊 Критерії оцінювання ('+rlist(t).length+')':'📊 Додати критерії оцінювання'));
+    if(t.status!=='active')G.mng.push(el('button',{class:'g',onclick:copyTask},'📋 Копіювати завдання'),el('button',{class:'g dg2',onclick:delTask},'🗑 Видалити завдання'));
+    else{const b=el('button',{class:'g dg2',title:'Спочатку завершіть завдання'},'🗑 Видалити завдання');b.disabled=true;G.mng.push(b)}
+    if(t.status==='active'&&t.endsAt)G.go.push(el('button',{class:'g',onclick:()=>tref.child(sel).update({endsAt:t.endsAt+300000})},'＋5 хв'));
+    if(t.ttype==='py'&&!t.pyk&&tAny(t)&&t.status!=='draft')G.chk.unshift(el('button',{class:'g','data-bt':'1',onclick:e=>batchTests(e.target)},bRun?'🧪 Перевіряю…':'🧪 Перевірити всіх тестами'));
+    if(t.ttype!=='py'&&clist(t).length&&t.status!=='draft')G.chk.unshift(el('button',{class:'g','data-bt':'1',onclick:e=>batchTests(e.target)},bRun?'☑ Перевіряю…':'☑ Перевірити вимоги в усіх'));
+    if(t.status==='active')G.go.push(el('button',{class:'dg',onclick:()=>finish(false)},t.endsAt?'⏹ Завершити достроково для всіх':'⏹ Завершити для всіх учнів'));
+    if(t.status==='finished'){const dc=el('button',{class:'g',onclick:delChecked},'');dc.className='g dg2';panel._dc=dc;G.go.push(el('button',{onclick:again},'♻ Задати знову'));G.mng.unshift(el('button',{class:'g',title:'Зберегти всі роботи у файл архіву й видалити їх з бази',onclick:e=>arDo([sel],e.target)},'📦 Архівувати роботи'));G.mng.push(dc)}
     const tmEl=t.status==='active'&&t.endsAt?el('b',{class:'tmr',style:'margin-left:10px'},'⏱ …'):null;panel._tm=tmEl;
     const imId=sel,ie=imgEd(null,v=>db.ref('timg/'+uid+'/'+imId).set(v),dr);db.ref('timg/'+uid+'/'+imId).once('value').then(x=>{if(sel===imId&&x.val()&&!ie.get())ie.set(x.val())}).catch(()=>{});
-    const kids=[el('div',{class:'mu'},stx,tmEl||''),tt,tx,ie.el,clsEl,ou?ou.el:el('div',{class:'mu'},(t.ttype==='py'?'🐍 Python: main.py'+(t.pyf?' + файли':'')+' · numpy: '+(t.pyn?'так':'ні')+' · pandas: '+(t.pyp?'так':'ні')+(t.pyk?' · tkinter: сумісний режим':''):'🌐 Веб: index.html'+(t.fcss!==false?' + CSS':'')+(t.fjs!==false?' + JS':''))+' · шаблон: '+(t.tplOn?'так':'ні')+' · '+(t.timerOn?'таймер: '+t.mins+' хв':'без таймера')+(t.trk||t.wrn||t.lck?' · контроль виходів: '+[t.trk?'облік':'',t.wrn?'попередження ('+(t.wn||3)+')':'',t.lck?'блокування':''].filter(Boolean).join(', '):'')+(t.ttype!=='py'&&clist(t).length?' · ☑ вимог: '+clist(t).length:'')+(t.ttype==='py'&&tlist(t).length?' · 🧪 тестів: '+tlist(t).length+' ('+(t.tmode==='words'?'збіг слів':t.tmode==='has'?'містить':'точний збіг')+')':'')+(t.pst?' · вставка коду: '+(t.pstb?'заборона':'облік'):''))];
-    if(t.code){const cb=el('button',{class:'g'},'📋 Код'),lb=el('button',{class:'g'},'🔗 Посилання'),qb=el('button',{class:'g'},'📱 QR-код');qb.onclick=()=>openQR(t);cb.onclick=()=>copy(t.code,cb);lb.onclick=()=>copy(base+'?c='+t.code,lb);
-      kids.push(el('div',{class:'row'},el('span',{class:'mu',style:'flex:0 0 auto'},'Код для учнів:'),el('span',{class:'code5'},t.code),cb,lb,qb))}
-    kids.push(el('div',{class:'row'},acts));panel.append(el('div',{class:'tp'},kids))};
+    tt.classList.add('ttl');tt.placeholder='Назва завдання';
+    const kids=[tt,tx,ie.el,clsEl,ou?ou.el:el('div',{class:'mu'},(t.ttype==='py'?'🐍 Python: main.py'+(t.pyf?' + файли':'')+' · numpy: '+(t.pyn?'так':'ні')+' · pandas: '+(t.pyp?'так':'ні')+(t.pyk?' · tkinter: сумісний режим':''):'🌐 Веб: index.html'+(t.fcss!==false?' + CSS':'')+(t.fjs!==false?' + JS':''))+' · шаблон: '+(t.tplOn?'так':'ні')+' · '+(t.timerOn?'таймер: '+t.mins+' хв':'без таймера')+(t.trk||t.wrn||t.lck?' · контроль виходів: '+[t.trk?'облік':'',t.wrn?'попередження ('+(t.wn||3)+')':'',t.lck?'блокування':''].filter(Boolean).join(', '):'')+(t.ttype!=='py'&&clist(t).length?' · ☑ вимог: '+clist(t).length:'')+(t.ttype==='py'&&tlist(t).length?' · 🧪 тестів: '+tlist(t).length+' ('+(t.tmode==='words'?'збіг слів':t.tmode==='has'?'містить':'точний збіг')+')':'')+(t.pst?' · вставка коду: '+(t.pstb?'заборона':'облік'):''))];
+    const right=[el('div',{class:'stc s-'+t.status},el('div',{},stx),tmEl||'')];
+    if(t.code){const cb=el('button',{class:'g'},'📋 Код'),lb=el('button',{class:'g'},'🔗 Посилання'),qb=el('button',{class:'g'},'📱 QR');qb.onclick=()=>openQR(t);cb.onclick=()=>copy(t.code,cb);lb.onclick=()=>copy(base+'?c='+t.code,lb);
+      right.push(el('div',{class:'agrp acc'},el('h5',{},'🔑 Доступ для учнів'),el('div',{class:'code5',title:'Код завдання'},t.code),el('div',{class:'bts3'},cb,lb,qb)))}
+    [['go','🚀 Учням'],['live','🎓 Під час уроку'],['chk','✅ Перевірка й оцінювання'],['mng','🗂 Керування завданням']].forEach(([k,h])=>{if(G[k].length)right.push(el('div',{class:'agrp'},el('h5',{},h),el('div',{class:'bts'},G[k])))});
+    const lc=el('div',{class:'tpc'},el('div',{class:'tpl'},kids));panel.append(el('div',{class:'tp2'},lc,el('div',{class:'tpr'},right)));place(lc)};
   const dflt=()=>{const ks=Object.keys(tasks),a=ks.find(k=>tasks[k].status==='active'),k=a||ks.sort((x,y)=>(tasks[y].created||0)-(tasks[x].created||0))[0];if(k)select(k);else drawAll()};
   const select=k=>{prefill=null;newImg=null;mOff();CODE={};sel=k;data={};prev={};pc={};ph={};pl={};pw={};pp={};phs={};ready=false;open=null;cur=(tasks[k]&&tasks[k].cls&&classes[tasks[k].cls])?tasks[k].cls:'all';Object.values(cards).forEach(c=>c.e.remove());cards={};
     if(wref)wref.off('value',wfn);wref=null;
@@ -367,14 +370,33 @@ function cabinet(uid,prof){
   /* --- класи --- */
   const addClass=()=>{const n=prompt('Назва класу (напр. 9-А):');if(n&&n.trim())cref.push({name:n.trim()})};
   const delClass=()=>{if(confirm('Видалити клас «'+cname(cur)+'»? Роботи учнів залишаться.'))cref.child(cur).remove()};
-  const drawChips=()=>{chips.textContent='';const ids=listed();
-    const mk=(k,t,list,total)=>{const p=list.filter(i=>data[i].st==='submitted').length,hh=list.filter(i=>data[i].help).length;
-      return el('button',{class:cur===k?'on':'g',onclick:()=>{cur=k;drawChips();apply();updAbs()}},t,el('span',{class:'cnt',title:total?'Підключено зараз / усього учнів у списку':'Підключено зараз'},String(list.filter(i=>data[i].on).length)+(total?'/'+total:'')),p?el('span',{class:'cnt',title:'Здали роботу'},'📥'+p):'',hh?el('span',{class:'cnt',title:'Просять допомоги'},'✋'+hh):'')};
-    {const cl=Object.values(classes),hasR=c=>c.roster&&Object.keys(c.roster).length;chips.append(mk('all','Усі',ids,cl.length&&cl.every(hasR)?cl.reduce((s,c)=>s+Object.keys(c.roster).length,0):0))}
-    Object.keys(classes).sort((a,b)=>classes[a].name.localeCompare(classes[b].name,'uk',{numeric:true})).forEach(k=>chips.append(mk(k,'🏫 '+classes[k].name,ids.filter(i=>data[i].cls===k),classes[k].roster?Object.keys(classes[k].roster).length:0)));
-    chips.append(el('button',{class:'g',onclick:addClass},'＋ Додати клас'));
-    if(cur!=='all')chips.append(el('button',{class:'g',onclick:openR},'👥 Список класу'),el('button',{class:'g',onclick:delClass},'🗑 Видалити клас'));
-    {const t=T();if(!creating&&t&&(t.status==='active'||t.status==='finished')){const on=showGrid();chips.append(el('button',{class:'g',style:'margin-left:auto',onclick:()=>{cardsVis[sel+'|'+t.status]=!showGrid();render()}},on?'🙈 Приховати екрани учнів':'🖥 Показати екрани учнів ('+ids.length+')'))}}};
+  /* --- бокова панель «Класи»: ширину можна змінити перетягуванням краю, панель згортається --- */
+  const sbtn=(ic,lbl,fn,cls)=>el('button',{class:'g sbtn'+(cls?' '+cls:''),title:lbl,onclick:fn},el('span',{class:'ic'},ic),el('span',{class:'lbl'},lbl));
+  const sAdd=sbtn('＋','Додати клас',()=>addClass()),sRos=sbtn('👥','Список класу',()=>openR()),sDel=sbtn('🗑','Видалити клас',()=>delClass(),'dg2');
+  let sw=(()=>{try{return Math.max(190,Math.min(480,+localStorage.getItem('kk_sw')||260))}catch(e){return 260}})(),sCol=(()=>{try{return localStorage.getItem('kk_sc')==='1'}catch(e){return false}})();
+  const side=el('aside',{class:'side'}),grip=el('div',{class:'sgrip',tabindex:'0',role:'separator','aria-orientation':'vertical',title:'Перетягніть, щоб змінити ширину (подвійний клік — стандартна ширина)'});
+  const scol=el('button',{class:'g sct'});
+  const setSide=()=>{side.classList.toggle('col',sCol);scol.textContent=sCol?'»':'«';scol.title=sCol?'Розгорнути панель класів':'Згорнути панель класів';side.style.width=sCol?'':sw+'px'};
+  const saveW=()=>{try{localStorage.setItem('kk_sw',sw)}catch(e){}};
+  grip.onpointerdown=e=>{if(sCol)return;e.preventDefault();const x0=e.clientX,w0=sw;side.classList.add('drag');try{grip.setPointerCapture(e.pointerId)}catch(_){}
+    grip.onpointermove=ev=>{sw=Math.max(190,Math.min(480,w0+ev.clientX-x0));side.style.width=sw+'px'};
+    grip.onpointerup=grip.onpointercancel=()=>{grip.onpointermove=null;side.classList.remove('drag');saveW()}};
+  grip.ondblclick=()=>{sw=260;setSide();saveW()};
+  grip.onkeydown=e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();sw=Math.max(190,Math.min(480,sw+(e.key==='ArrowRight'?20:-20)));setSide();saveW()}};
+  scol.onclick=()=>{sCol=!sCol;try{localStorage.setItem('kk_sc',sCol?'1':'0')}catch(e){}setSide()};
+  side.append(el('div',{class:'sh'},el('b',{class:'lbl'},'Класи'),scol),chips,el('div',{class:'sf'},sAdd,sRos,sDel),grip);setSide();
+  const short=n=>{const x=String(n||'').trim();return x.length<=5?x:x.slice(0,4)+'…'};
+  const drawChips=()=>{chips.textContent='';vbar.textContent='';const ids=listed();
+    const mk=(k,name,list,total)=>{const on=list.filter(i=>data[i].on).length,p=list.filter(i=>data[i].st==='submitted').length,hh=list.filter(i=>data[i].help).length;
+      return el('button',{class:'ci'+(cur===k?' on':''),title:name+' — підключено '+on+(total?' з '+total:''),onclick:()=>{cur=k;drawChips();apply();updAbs()}},
+        el('span',{class:'cin'},el('span',{class:'ic'},k==='all'?'👥':'🏫'),el('span',{class:'cit'},name),el('span',{class:'cis'},k==='all'?'Усі':short(name))),
+        el('span',{class:'cib'},el('span',{class:'cnt',title:'Підключено зараз'+(total?' / усього в списку':'')},on+(total?'/'+total:'')),p?el('span',{class:'cnt s',title:'Здали роботу'},'📥'+p):'',hh?el('span',{class:'cnt h',title:'Просять допомоги'},'✋'+hh):''))};
+    {const cl=Object.values(classes),hasR=c=>c.roster&&Object.keys(c.roster).length;chips.append(mk('all','Усі класи',ids,cl.length&&cl.every(hasR)?cl.reduce((a,c)=>a+Object.keys(c.roster).length,0):0))}
+    Object.keys(classes).sort((a,b)=>classes[a].name.localeCompare(classes[b].name,'uk',{numeric:true})).forEach(k=>chips.append(mk(k,classes[k].name,ids.filter(i=>data[i].cls===k),classes[k].roster?Object.keys(classes[k].roster).length:0)));
+    if(!Object.keys(classes).length)chips.append(el('div',{class:'mu lbl',style:'padding:6px 4px'},'Класів ще немає. Додайте перший клас кнопкою нижче.'));
+    sRos.disabled=sDel.disabled=cur==='all';sRos.title=cur==='all'?'Спершу виберіть клас':'Список учнів класу «'+cname(cur)+'»';
+    {const t=T();if(!creating&&t&&(t.status==='active'||t.status==='finished')){const on=showGrid();vbar.append(el('button',{class:'g',onclick:()=>{cardsVis[sel+'|'+t.status]=!showGrid();render()}},on?'🙈 Приховати екрани учнів':'🖥 Показати екрани учнів ('+ids.length+')'),
+      el('span',{class:'mu'},cur==='all'?'Усі класи':'Клас: '+cname(cur)))}}};
   /* --- учні --- */
   const STT=d=>d.st==='submitted'?[d.auto?'📥 Здано (авто)':'📥 Здано','s']:d.st==='checked'?['✅ '+(d.grade||'Перевірено'),'k']:d.st==='returned'?['↩ Доопрац.','r']:['',''];
   const stLine=d=>d.st==='submitted'?'📥 Здано '+new Date(d.sub||Date.now()).toLocaleTimeString('uk',{hour:'2-digit',minute:'2-digit'}):d.st==='checked'?'✅ Перевірено'+(d.grade?' · '+d.grade:''):d.st==='returned'?'↩ На доопрацюванні':'✏ Працює';
@@ -514,7 +536,7 @@ function cabinet(uid,prof){
   const openJ=()=>{jm.style.display='flex';jerr=false;if(!jref){jref=db.ref('journal/'+uid);jfn=s=>{jdata=s.val()||{};drawJ()};jref.on('value',jfn,()=>{jerr=true;drawJ()})}drawJ()};
   jm.append(el('div',{},el('header',{},el('b',{},'📒 Журнал оцінок'),el('button',{class:'g',onclick:csv},'⬇ CSV (Excel)'),el('button',{class:'g',onclick:closeJ},'✕ Закрити')),jch,jb));
   /* --- списки класів і відвідуваність --- */
-  const absent=el('div',{class:'mu',style:'padding:0 16px 12px'});
+  const absent=el('div',{class:'mu absent',style:'padding:0 16px 12px'});
   const updAbs=()=>{const c=cur!=='all'?classes[cur]:null,R=c&&c.roster?Object.keys(c.roster):[];
     if(creating){absent.style.display='none';return}
     if(c&&!R.length){absent.style.display='';absent.textContent='⚠ Для цього класу не створено список учнів — вони не зможуть підключитися. Натисніть «👥 Список класу».';return}
@@ -603,7 +625,11 @@ function cabinet(uid,prof){
       avM.append(el('div',{},el('header',{},el('b',{style:'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},'📂 '+name),packs.length>1?tsel:'',el('button',{class:'g',onclick:()=>{avM.style.display='none';avM.textContent=''}},'✕ Закрити')),
         el('div',{class:'avw'},list,det)))};
     avM.style.display='flex';draw()};
-  $app.append(el('header',{},el('b',{},'🧑‍🏫 '+who),el('button',{class:'g',onclick:openJ},'📒 Журнал'),el('button',{class:'g',onclick:arOpen},'🗄 Архів'),el('button',{class:'g',onclick:exp},'⬇ Роботи (JSON)'),el('button',{class:'g',onclick:chPw},'🔑 Пароль'),el('button',{class:'g',onclick:()=>AU.signOut().then(()=>location.reload())},'Вийти')),warn,tbar,panel,chips,tctl,grid,empty,absent,modal,jm,rm,dm,qm,arM,avM,rbM,hiM,vaM,toasts);
+  /* картки учнів стоять під завданням у лівій колонці, коли завдання відкрито; інакше — в основній частині */
+  const mainc=el('main',{class:'mainc'},warn,tbar,panel);const place=to=>to.append(vbar,tctl,grid,empty,absent);place(mainc);
+  $app.append(el('header',{class:'top'},el('div',{class:'brand'},el('span',{class:'logo'},'</>'),el('b',{},'Клас-код')),el('span',{class:'who'},'🧑‍🏫 '+who),
+    el('div',{class:'hact'},el('button',{class:'g',onclick:openJ},'📒 Журнал'),el('button',{class:'g',onclick:arOpen},'🗄 Архів'),el('button',{class:'g',onclick:exp,title:'Завантажити роботи вибраного завдання у файл JSON'},'⬇ Роботи (JSON)'),el('button',{class:'g',onclick:chPw},'🔑 Пароль'),el('button',{class:'g',onclick:()=>AU.signOut().then(()=>location.reload())},'Вийти'))),
+    el('div',{class:'cab'},side,mainc),modal,jm,rm,dm,qm,arM,avM,rbM,hiM,vaM,toasts);
   drawWarn();if(user&&user.reload)user.reload().then(drawWarn,()=>{});
   tref.on('value',s=>{tasks=s.val()||{};if(sel&&!tasks[sel])select(null);
     drawBar();if(kPanel()!==pkey)drawPanel();render();

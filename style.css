@@ -98,3 +98,95 @@ details.rubd{margin:0 16px 10px;padding:8px 14px;border-radius:10px;background:v
 .hint{white-space:pre-wrap;padding:6px 10px;border-radius:8px;background:#fff;border:1px solid #fde68a}.hint.lk{color:#a16207;background:transparent;border-style:dashed}
 .bd.v{background:#e0e7ff;color:#3730a3}.bd.hn{background:#fef08a;color:#713f12}
 .vtab{border-collapse:collapse;width:100%}.vtab td,.vtab th{border-bottom:1px solid var(--bd);padding:6px 8px;text-align:left}.vtab select{width:auto}
+
+/* ================= сучасний вигляд (кабінет вчителя та загальні елементи) ================= */
+:root{--hv:#eef0fb;--acs:rgba(79,70,229,.10);--sh:0 1px 2px rgba(16,24,40,.05),0 4px 14px rgba(16,24,40,.05);--dg:#dc2626;--topH:57px}
+@media(prefers-color-scheme:dark){:root{--hv:#252a3a;--acs:rgba(129,140,248,.16);--sh:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.25)}}
+body{font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+/* кнопки: наведення, натискання, фокус з клавіатури */
+button{font-weight:500;line-height:1.25;transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease,transform .08s ease,filter .15s ease,color .15s ease}
+button:not(:disabled):hover{filter:brightness(1.08);box-shadow:0 3px 10px rgba(79,70,229,.28);transform:translateY(-1px)}
+button:not(:disabled):active{transform:translateY(0) scale(.97);filter:brightness(.94);box-shadow:none}
+button.g{background:var(--card)}
+button.g:not(:disabled):hover{background:var(--hv);border-color:var(--ac);filter:none;box-shadow:0 2px 6px rgba(16,24,40,.08)}
+button.g:not(:disabled):active{background:var(--acs)}
+button.on,button.g.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+button:focus-visible,.sgrip:focus-visible,summary:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+button.dg{background:var(--dg);color:#fff}button.dg:not(:disabled):hover{box-shadow:0 3px 10px rgba(220,38,38,.35)}
+button.g.dg2{color:var(--dg);border-color:rgba(220,38,38,.35)}button.g.dg2:not(:disabled):hover{background:rgba(220,38,38,.08);border-color:var(--dg)}
+button.big{padding:11px 16px;font-size:15px;font-weight:600}
+button:disabled{transform:none;box-shadow:none}
+@media(prefers-reduced-motion:reduce){button,.st,.side{transition:none!important}button:not(:disabled):hover,button:not(:disabled):active,.st:hover{transform:none!important}}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--acs)}
+input,textarea,select{transition:border-color .15s,box-shadow .15s}
+summary{cursor:pointer}
+/* верхня панель */
+header.top{position:sticky;top:0;z-index:8;min-height:var(--topH);gap:14px;padding:8px 16px;box-shadow:0 1px 3px rgba(16,24,40,.06)}
+header.top b{flex:none}.brand{display:flex;gap:10px;align-items:center;flex:none}
+.logo{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--ac),#7c3aed);color:#fff;font:700 13px ui-monospace,Menlo,monospace;box-shadow:0 2px 8px rgba(79,70,229,.35)}
+.brand b{font-size:17px;letter-spacing:.01em}.who{flex:1;min-width:0;color:var(--mu);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hact{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.hact button{padding:7px 12px}
+/* розкладка: бокова панель + основна частина */
+.cab{display:flex;align-items:stretch;min-height:calc(100vh - var(--topH))}
+.mainc{flex:1;min-width:0;padding-bottom:16px}
+.side{position:sticky;top:var(--topH);align-self:flex-start;height:calc(100vh - var(--topH));flex:none;display:flex;flex-direction:column;background:var(--card);border-right:1px solid var(--bd);width:260px;transition:width .18s ease}
+.side.drag{transition:none;user-select:none}
+.sh{display:flex;align-items:center;gap:8px;padding:14px 12px 8px 14px}.sh b{flex:1;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--mu)}
+.sct{padding:4px 10px;font-size:14px;line-height:1}
+.clist{flex:1;overflow:auto;padding:4px 8px;display:grid;gap:3px;align-content:start}
+.ci{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:transparent;color:var(--tx);border:1px solid transparent;padding:8px 10px;border-radius:10px;font-weight:500}
+.ci:not(:disabled):hover{background:var(--hv);filter:none;box-shadow:none;transform:none}
+.ci.on{background:var(--acs);border-color:var(--ac);color:var(--tx)}.ci.on .cnt{background:var(--ac);color:#fff}
+.cin{flex:1;min-width:0;display:flex;gap:8px;align-items:center}.cit{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cis{display:none;font-size:11px}
+.cib{display:flex;gap:4px;flex:none}.cib .cnt{margin:0}.cnt.s{background:#fde68a;color:#78350f}.cnt.h{background:#fecaca;color:#7f1d1d}
+.sf{display:grid;gap:6px;padding:10px;border-top:1px solid var(--bd)}.sbtn{display:flex;gap:8px;align-items:center;justify-content:flex-start;padding:7px 10px}
+.sbtn .ic{width:18px;text-align:center;flex:none}
+.sgrip{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;z-index:3;border-radius:4px}
+.sgrip:hover,.side.drag .sgrip,.sgrip:focus-visible{background:var(--ac);opacity:.35}
+.side.col{width:68px!important}.side.col .lbl,.side.col .cit,.side.col .cnt.s,.side.col .cnt.h{display:none}
+.side.col .sh{justify-content:center;padding:12px 6px 6px}.side.col .clist{padding:4px 6px}
+.side.col .ci{flex-direction:column;gap:3px;padding:7px 2px;align-items:center}.side.col .cin{flex-direction:column;gap:1px;align-items:center}.side.col .cis{display:block;max-width:100%;overflow:hidden;white-space:nowrap}
+.side.col .cib .cnt{font-size:10px;padding:0 5px}.side.col .sgrip{display:none}.side.col .sbtn{justify-content:center;padding:7px 4px}
+@media(max-width:760px){.cab{display:block}.side{position:static;height:auto;width:auto!important;border-right:0;border-bottom:1px solid var(--bd)}.sgrip{display:none}
+  .clist{grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto;padding-bottom:8px}.ci{width:auto}.sf{grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto}
+  .side.col{width:auto!important}.side.col .clist,.side.col .sf{display:none}.side.col .lbl{display:inline}.side.col .sh{justify-content:flex-start}}
+/* панель вибору завдання */
+.tbar{margin:14px 16px 0;padding:10px 12px;background:var(--card);border:1px solid var(--bd);border-radius:14px;box-shadow:var(--sh)}
+.vbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px 4px}.vbar:empty{display:none}
+/* панель завдання: вміст ліворуч, стан і дії праворуч */
+.mainc>div>.tp{margin:12px 16px;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;box-shadow:var(--sh)}
+.tp2{display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,330px);gap:14px;align-items:start;margin:12px 16px}
+.tpl{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;display:grid;gap:10px;box-shadow:var(--sh);min-width:0}
+.tpr{display:grid;gap:10px;position:sticky;top:calc(var(--topH) + 12px)}
+input.ttl{font-size:19px;font-weight:600;padding:10px 12px}
+.stc{border-radius:14px;padding:12px 14px;font-weight:600;display:grid;gap:4px;box-shadow:var(--sh)}
+.stc.s-draft{background:#f1f5f9;color:#334155}.stc.s-active{background:#dcfce7;color:#14532d}.stc.s-finished{background:#e0e7ff;color:#312e81}
+.stc .tmr{margin-left:0!important;font-size:20px}
+.agrp{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;display:grid;gap:8px;box-shadow:var(--sh)}
+.agrp>h5{margin:0;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+.agrp .bts{display:grid;gap:6px}.agrp .bts button{width:100%;text-align:left}
+.agrp .bts3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.agrp .bts3 button{padding:7px 6px}
+.acc .code5{font:700 30px ui-monospace,Menlo,monospace;letter-spacing:6px;text-align:center;padding:6px 0;border:1px dashed var(--bd);border-radius:10px;background:var(--bg)}
+@media(max-width:1100px){.tp2{grid-template-columns:1fr}.tpr{position:static;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}}
+/* картки учнів */
+.grid{padding:8px 16px 16px}
+.st{box-shadow:var(--sh);transition:transform .12s ease,box-shadow .15s ease,border-color .15s ease}
+.st:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,24,40,.12);border-color:var(--ac)}
+.cnt{display:inline-block;line-height:18px}
+.modal>div{box-shadow:0 20px 60px rgba(0,0,0,.35)}.modal{backdrop-filter:blur(2px)}
+@media(prefers-color-scheme:dark){.stc.s-draft{background:#273244;color:#cbd5e1}.stc.s-active{background:#14361f;color:#bbf7d0}.stc.s-finished{background:#232a52;color:#c7d2fe}
+  .cnt.s{background:#78350f;color:#fde68a}.cnt.h{background:#7f1d1d;color:#fecaca}}
+/* компактніші групи дій: кнопки в рядок з переносом */
+.agrp{padding:10px 12px;gap:7px}.agrp .bts{display:flex;flex-wrap:wrap;gap:6px}.agrp .bts button{width:auto;flex:1 1 auto;text-align:center;padding:7px 10px}
+.agrp .bts button.big,.agrp .bts button.dg{flex-basis:100%}
+.acc{grid-template-columns:auto 1fr;align-items:center}.acc>h5{grid-column:1/-1}.acc .code5{font-size:22px;letter-spacing:4px;padding:4px 10px}
+.agrp .bts3{grid-template-columns:repeat(3,auto);gap:4px}.agrp .bts3 button{padding:6px 8px;font-size:13px;white-space:nowrap}
+.stc{padding:10px 14px}.stc .tmr{font-size:18px}
+.tpr,.tpr>*{min-width:0}.tp2{grid-template-columns:minmax(0,1fr) minmax(0,330px)}
+.acc{grid-template-columns:1fr}.acc .code5{text-align:center}
+.agrp .bts3{grid-template-columns:repeat(3,minmax(0,1fr))}.agrp .bts3 button{padding:6px 4px;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:1100px){.tp2{grid-template-columns:1fr}}
+/* картки учнів у лівій колонці під завданням */
+.tpc{display:grid;gap:4px;min-width:0;align-content:start}.tpc>.vbar{padding:10px 0 2px}.tpc>.tctl{padding:0!important}.tpc>.grid{padding:8px 0 0}
+.tpc>.empty,.tpc>.absent{padding:4px 2px!important}
+@media(max-width:1100px){.tpr{order:-1}}
