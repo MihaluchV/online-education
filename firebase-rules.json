@@ -145,6 +145,16 @@
           "ws": {
             ".write": "auth != null && data.parent().child('u').val() === auth.uid",
             ".validate": "newData.hasChildren(['p','n']) && newData.child('p').isNumber() && newData.child('n').isNumber()"
+          },
+          "hs": {
+            "$h": {
+              ".write": "auth != null && !data.exists() && data.parent().parent().child('u').val() === auth.uid",
+              ".validate": "newData.isNumber()"
+            }
+          },
+          "vr": {
+            ".write": "auth != null && data.parent().child('u').val() === auth.uid",
+            ".validate": "newData.isString() && newData.val().length <= 40"
           }
         }
       }
@@ -156,6 +166,18 @@
         "$s": {
           ".read": "auth != null && root.child('works').child($t).child($s).child('u').val() === auth.uid",
           ".write": "auth != null && root.child('works').child($t).child($s).child('u').val() === auth.uid"
+        }
+      }
+    },
+    "hist": {
+      "$t": {
+        ".read": "auth != null && root.child('owners').child($t).val() === auth.uid",
+        ".write": "auth != null && root.child('owners').child($t).val() === auth.uid",
+        "$s": {
+          "$k": {
+            ".write": "auth != null && !data.exists() && root.child('works').child($t).child($s).child('u').val() === auth.uid",
+            ".validate": "newData.hasChild('at') && newData.child('at').isNumber()"
+          }
         }
       }
     },

@@ -57,7 +57,7 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
   /* автоперевірка тестами (лише Python без tkinter): результат бачить учень, а вчитель — підсумок на картці */
   const tres=el('div',{class:'tres',style:'display:none'});let tRun=false,tEng=null;
   const tb=el('button',{class:'g',style:'display:none',onclick:()=>doTests(false)},'🧪 Перевірити');
-  const tAvail=()=>PY&&!GUI&&tlist(tk).length>0;
+  const tAvail=()=>PY&&!GUI&&tTests(tk,myVar()).length>0;
   /* чек-лист вимог для веб-завдань: перевірка сторінки в ізольованій невидимій рамці */
   const wres=el('div',{class:'tres',style:'display:none'});let wRun=false;
   const wb=el('button',{class:'g',style:'display:none',onclick:()=>doWeb(false)},'☑ Перевірити вимоги');
@@ -68,7 +68,7 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
     wres.append(el('button',{class:'g',style:'float:right;padding:2px 8px',title:'Сховати результати',onclick:()=>{wres.style.display='none'}},'✕'),
       el('div',{class:'banner '+(p===n?'ok':'rt'),style:'margin:0 0 8px'},(p===n?'✅ Усі вимоги виконано: ':'☑ Виконано вимог: ')+p+' з '+n+(auto?' (перевірка під час здачі)':'')),cView(C,res));
     ref.update({ws:{p,n,at:Date.now(),a:!!auto}}).catch(()=>{})};
-  const doTests=async auto=>{if(tRun||!tAvail())return;const T=tlist(tk);tRun=true;tb.disabled=true;F[cur]=ed.get();
+  const doTests=async auto=>{if(tRun||!tAvail())return;const T=tTests(tk,myVar());tRun=true;tb.disabled=true;F[cur]=ed.get();
     tres.style.display='';tres.textContent='';const ln=el('div',{class:'mu'},'🧪 Готую перевірку…');tres.append(ln);
     if(!tEng)tEng=testEngine();const r=await runTests({eng:tEng,files:{...F},libs:pyLibs(tk),main:MAIN,tests:T,mode:tk.tmode||'exact',limit:tk.tlim||5,onStatus:m=>{ln.textContent='⏳ '+m},onProgress:(a,b)=>{ln.textContent='🧪 Перевірено тестів: '+a+' з '+b+'…'}});
     tRun=false;tb.disabled=false;tres.textContent='';
@@ -91,13 +91,24 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
   /* Код учня — окремо в code/{завдання}/{учень}: вчитель не отримує файли всіх учнів при кожному збереженні. Якщо правила бази ще старі — пишемо як раніше, у works. */
   const kref=db.ref('code/'+t+'/'+id);let kOK=true,lastSave=0,stimer=null;
   const kput=c=>{if(!Object.keys(c).length)return;if(!kOK){ref.update(c).catch(()=>{});return}kref.update(c).catch(()=>{kOK=false;ref.update(c).catch(()=>{})})};
-  const pay=all=>{const u={upd:Date.now()},c={};if(all)Object.assign(u,meta());(all?Object.keys(F):[...dirty]).forEach(n=>{c['files/'+fk(n)+'/n']=n;c['files/'+fk(n)+'/c']=F[n]});dirty.clear();kput(c);return u};
+  /* історія набору коду: на старті сеансу — повний знімок, далі на кожне збереження лише різниця (позиція, скільки видалено, що вставлено) */
+  const href=db.ref('hist/'+t+'/'+id);let hOK=true,HL=null,hN=0,hC=0;ed.on(()=>{hC++});
+  const hput=e=>{if(!hOK||!HL)return;e.at=Date.now();href.push(e).catch(()=>{hOK=false})};
+  const hkey=()=>{HL={...F};hN=0;hput({k:1,F:Object.keys(F).map(n=>({n,c:F[n]}))})};
+  const hdiff=n=>{if(!HL)return;const a=HL[n],b=F[n];if(a===b||b===undefined)return;
+    if(a===undefined)hput({f:n,p:0,d:0,x:b,c:hC});
+    else{let p=0;const m=Math.min(a.length,b.length);while(p<m&&a.charCodeAt(p)===b.charCodeAt(p))p++;let q=0;while(q<m-p&&a.charCodeAt(a.length-1-q)===b.charCodeAt(b.length-1-q))q++;
+      hput({f:n,p,d:a.length-p-q,x:b.slice(p,b.length-q),c:hC})}
+    HL[n]=b;if(++hN>=150)hkey()};
+  const pay=all=>{const u={upd:Date.now()},c={};if(all)Object.assign(u,meta());const ns=all?Object.keys(F):[...dirty];ns.forEach(n=>{c['files/'+fk(n)+'/n']=n;c['files/'+fk(n)+'/c']=F[n]});dirty.clear();kput(c);ns.forEach(hdiff);hC=0;return u};
   const save=()=>{clearTimeout(stimer);stimer=null;lastSave=Date.now();status.textContent='зберігаю…';ref.update(pay(false)).then(()=>status.textContent='✓ збережено')};
   const edit=()=>{F[cur]=ed.get();dirty.add(cur);clearTimeout(timer);timer=setTimeout(()=>{if(!PY&&ac.checked)runWeb()},900);
     clearTimeout(stimer);if(Date.now()-lastSave>10000&&lastSave)stimer=setTimeout(save,300);else stimer=setTimeout(save,2000)};
   const vflush=()=>{if(document.hidden&&dirty.size&&loaded)save()};document.addEventListener('visibilitychange',vflush);
   ed.on(edit);
-  let psC=0,psZ=0,psN=0;const psCopy=[],psNrm=x=>String(x||'').replace(/\r\n?/g,'\n').trim();
+  let rubBox=null,hintBox=null,ROS=null,hSeen=-1,psC=0,psZ=0,psN=0;
+  db.ref('classes/'+o+'/'+cid+'/roster').once('value').then(x=>{ROS=x.val()||{};paint()}).catch(()=>{ROS={};paint()});
+  const myVar=()=>tk&&vlist(tk).length&&ROS?varOf(tk,ROS,id,t):null;const psCopy=[],psNrm=x=>String(x||'').replace(/\r\n?/g,'\n').trim();
   ed.onCopy(x=>{const v=psNrm(x);if(v){psCopy.push(v);if(psCopy.length>40)psCopy.shift()}});
   ed.onIns((x,k)=>{if(!(tk&&tk.pst&&tk.status==='active'&&!isExp()&&st!=='submitted'&&st!=='checked'))return false;const v=psNrm(x);
     if(v.length<(tk.psn||20))return false;if(psCopy.some(c=>c.includes(v)))return false;if(tk.text&&psNrm(tk.text).includes(v))return false;
@@ -122,20 +133,30 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
     F[cur]=ed.get();F[n]='';ed.sync(n,'');cur=n;ed.show(n);dirty.add(n);drawF();save()};
   const renF=()=>{if(ed.locked()||cur===MAIN)return;const raw=prompt('Нова назва файлу:',cur);if(raw==null)return;const n=raw.trim();if(n===cur)return;
     if(!okN(n))return alert(BAD());if(dup(n,cur))return alert('Файл з такою назвою вже є');
-    F[cur]=ed.get();const o=cur;F[n]=F[o];delete F[o];dirty.delete(o);ed.ren(o,n);cur=n;
+    F[cur]=ed.get();const o=cur;hdiff(o);F[n]=F[o];delete F[o];dirty.delete(o);ed.ren(o,n);cur=n;hput({op:'mv',f:o,to:n});if(HL){HL[n]=HL[o];delete HL[o]}
     const u=pay(false);kput({['files/'+fk(o)]:null,['files/'+fk(n)+'/n']:n,['files/'+fk(n)+'/c']:F[n]});ref.update(u);drawF();refresh()};
   const delF=()=>{if(ed.locked()||cur===MAIN)return;if(!confirm('Видалити файл '+cur+'?'))return;const n=cur;
-    delete F[n];dirty.delete(n);ed.drop(n);cur=MAIN;ed.show(cur);kput({['files/'+fk(n)]:null});ref.update({upd:Date.now()});drawF();refresh()};
+    delete F[n];dirty.delete(n);ed.drop(n);cur=MAIN;hput({op:'rm',f:n});if(HL)delete HL[n];ed.show(cur);kput({['files/'+fk(n)]:null});ref.update({upd:Date.now()});drawF();refresh()};
   const onMsg=e=>{if(e.source!==pv.contentWindow||!e.data||e.data.k!=='log')return;con.append(el('div',{class:e.data.t},'› '+e.data.m));con.scrollTop=1e9};
   addEventListener('message',onMsg);
-  const paint=()=>{const exp=isExp(),act=tk&&tk.status==='active'&&!exp,fin=tk&&tk.status==='finished';tb.style.display=tAvail()?'':'none';tb.textContent='🧪 Перевірити ('+tlist(tk).length+' тест.)';wb.style.display=wAvail()?'':'none';wb.textContent='☑ Перевірити вимоги ('+clist(tk).length+')';
+  const paint=()=>{const exp=isExp(),act=tk&&tk.status==='active'&&!exp,fin=tk&&tk.status==='finished';tb.style.display=tAvail()?'':'none';tb.textContent='🧪 Перевірити ('+tTests(tk,myVar()).length+' тест.)';wb.style.display=wAvail()?'':'none';wb.textContent='☑ Перевірити вимоги ('+clist(tk).length+')';
     task.className='banner'+(fin?' rt':'');if(imgH._s!==IMG){imgH._s=IMG;imgH.textContent='';if(IMG)imgH.append(imgThumb(IMG))}imgH.style.display=act&&IMG?'':'none';
-    task.textContent=tk===undefined?'⏳ Завантаження…':!tk?'Завдання не знайдено або видалене.':exp?'⏱ Час вийшов. Роботу здано автоматично. Очікуйте завершення завдання вчителем.':act?'📝 '+tk.title+(tk.text?'\n'+tk.text:''):fin?'⏹ Завдання «'+tk.title+'» завершено вчителем. Вашу роботу збережено.':'⏳ Завдання «'+tk.title+'» ще не розпочато. Очікуйте, поки вчитель відправить його.';
+    task.textContent=tk===undefined?'⏳ Завантаження…':!tk?'Завдання не знайдено або видалене.':exp?'⏱ Час вийшов. Роботу здано автоматично. Очікуйте завершення завдання вчителем.':act?(()=>{const V=myVar();return '📝 '+tk.title+(V?' · 🔀 Варіант '+vNum(tk,V):'')+(tk.text?'\n'+tk.text:'')+(V?'\n\n🔀 Варіант '+vNum(tk,V)+':\n'+V.x:'')})():fin?'⏹ Завдання «'+tk.title+'» завершено вчителем. Вашу роботу збережено.':'⏳ Завдання «'+tk.title+'» ще не розпочато. Очікуйте, поки вчитель відправить його.';
     const T={submitted:[W.auto?'📥 Роботу здано автоматично після завершення завдання. Очікуйте перевірки.':'📥 Роботу здано. Очікуйте перевірки.',''],checked:['✅ Вчитель перевірив вашу роботу'+(W.grade?'. Оцінка: '+W.grade:'')+(W.fb?'\n'+W.fb:''),'ok'],returned:['↩ Роботу повернено на доопрацювання'+(W.fb?':\n'+W.fb:''),'rt']}[st];
-    res.style.display=T?'':'none';if(T){res.textContent=T[0];res.className='banner '+T[1]}
+    res.style.display=T?'':'none';if(T){res.textContent=T[0];res.className='banner '+T[1];if(st==='checked'&&W.rs){const rv=rubView(tk,W.rs);if(rv)res.append(rv)}}
+    {const V=myVar();if(V&&loaded&&W.vr!==V.id)ref.update({vr:V.id}).catch(()=>{})}
+    if(hintBox){const H=hlist(tk),show=H.length&&(act||fin);hintBox.style.display=show?'':'none';
+      if(show){const open=H.filter(h=>hWho(tk,W,h)),key=JSON.stringify([H,open.map(h=>h.id),tk.hmode,act]);
+        if(hintBox._k!==key){hintBox._k=key;hintBox.textContent='';hintBox.append(el('b',{},'💡 Підказки: відкрито '+open.length+' з '+H.length));
+          H.forEach((h,k)=>{const w=hWho(tk,W,h);if(w)hintBox.append(el('div',{class:'hint'},'💡 Підказка '+(k+1)+(w==='me'?' (вчитель відкрив вам)':'')+':\n'+h.t));
+            else hintBox.append(el('div',{class:'hint lk'},'🔒 Підказка '+(k+1)+' — ',tk.hmode==='self'&&act?el('button',{class:'g',style:'padding:2px 10px',onclick:()=>{if(confirm('Відкрити підказку '+(k+1)+'? Вчитель побачить, що ви її відкрили.'))ref.child('hs/'+h.id).set(Date.now()).catch(()=>alert('Не вдалося відкрити підказку. Зверніться до вчителя.'))}},'відкрити'):'її відкриє вчитель'))});
+          if(hSeen>=0&&open.length>hSeen){awb.textContent='💡 З’явилася нова підказка — див. під текстом завдання.';awb.style.display='';clearTimeout(awb._t);awb._t=setTimeout(()=>{awb.style.display='none'},10000)}
+          hSeen=open.length}}}
+    if(rubBox){const C=rlist(tk),key=C.length&&(act||fin)&&st!=='checked'?JSON.stringify(tk.rub):'';if(rubBox._k!==key){rubBox._k=key;rubBox.textContent='';
+      if(key)rubBox.append(el('summary',{},'📊 Критерії оцінювання ('+rMax(C)+' балів → оцінка за '+rScale(tk)+'-бальною шкалою)'),rubView(tk))}rubBox.style.display=key?'':'none'}
     const lckd=!!(tk&&tk.lck&&W.lk&&act);ed.ro(!act||st==='submitted'||st==='checked'||lckd);
     lb.style.display=lckd?'':'none';lb.textContent='🔒 Редактор заблоковано, бо ви залишили сторінку. Попросіть вчителя розблокувати (кнопка «✋ Потрібна допомога»).';
-    ctl.textContent=[tk&&(tk.trk||tk.wrn||tk.lck)?'👁 Контроль виходів зі сторінки':'',tk&&tk.pst?(tk.pstb?'⛔ Вставка коду з інших джерел заборонена':'📋 Контроль вставки коду'):''].filter(Boolean).join(' · ');fsb.style.display=tk&&tk.wrn?'':'none';
+    ctl.textContent=[tk&&(tk.trk||tk.wrn||tk.lck)?'👁 Контроль виходів зі сторінки':'',tk&&tk.pst?(tk.pstb?'⛔ Вставка коду з інших джерел заборонена':'📋 Контроль вставки коду'):'',tk&&tk.status==='active'&&hOK&&HL?'⏺ Записується історія набору коду':''].filter(Boolean).join(' · ');fsb.style.display=tk&&tk.wrn?'':'none';
     sb.textContent=st==='submitted'?'↩ Скасувати здачу':'✅ Здати роботу';sb.disabled=!act||st==='checked';hb.textContent=W.help?'✋ Скасувати виклик':'✋ Потрібна допомога';hb.className=W.help?'on':'g';hb.disabled=!act||st==='checked';
     rb.disabled=PY&&!(tk&&tk.status!=='draft');if(PY&&tk&&!warmed){warmed=true;py.warm()}
     if(loaded&&act&&tk.tplOn&&!ini&&F[MAIN]===''){ini=true;F[MAIN]=tk.tplCode||(PY?PYTPL:TPLDOC);ed.sync(MAIN,F[MAIN]);dirty.add(MAIN);const u=pay(false);u.ini=true;ref.update(u);refresh()}
@@ -147,7 +168,7 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
   const submit=()=>{if(!tk||tk.status!=='active'||isExp())return;
     if(st==='submitted'){if(confirm('Скасувати здачу й продовжити роботу?'))ref.update({st:'work',auto:null});return}
     if(st==='checked'||!confirm('Здати роботу вчителю? Після здачі редагування буде заблоковано.'))return;
-    clearTimeout(timer);refresh();ref.update({...pay(true),st:'submitted',sub:Date.now(),auto:null});if(tAvail())doTests(true);if(wAvail())doWeb(true)};
+    clearTimeout(timer);refresh();ref.update({...pay(true),st:'submitted',sub:Date.now(),auto:null});hput({e:'sub'});if(tAvail())doTests(true);if(wAvail())doWeb(true)};
   const leave=()=>{unwatch();if(py)py.dispose();clearInterval(tick);offRef.off('value',offFn);clearTimeout(timer);F[cur]=ed.get();conn.off();tref.off('value',onTask);imRef.off('value',onIm);ref.off('value',onVal);removeEventListener('message',onMsg);document.removeEventListener('visibilitychange',vflush);if(tEng){tEng.dispose();tEng=null}clearTimeout(stimer);
     ref.child('on').onDisconnect().cancel();ref.child('help').onDisconnect().cancel();ref.update({...pay(true),on:false,help:null});home()};
   const offRef=db.ref('.info/serverTimeOffset'),offFn=s=>{off=s.val()||0};offRef.on('value',offFn);
@@ -170,12 +191,12 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
       awayAt=0;counted=false}};
   const wtick=setInterval(check,500);addEventListener('blur',check);addEventListener('focus',check);document.addEventListener('visibilitychange',check);
   const unwatch=()=>{clearInterval(wtick);removeEventListener('blur',check);removeEventListener('focus',check);document.removeEventListener('visibilitychange',check)};
-  $app.append(el('header',{},el('b',{},'👤 '+fn+' '+ln),el('span',{class:'mu'},'🏫 '+cname),tm,ctl,status,fsb,hb,cbtn,sb,el('button',{class:'g',onclick:leave},'Вийти')),tbox,awb,lb,res,
+  $app.append(el('header',{},el('b',{},'👤 '+fn+' '+ln),el('span',{class:'mu'},'🏫 '+cname),tm,ctl,status,fsb,hb,cbtn,sb,el('button',{class:'g',onclick:leave},'Вийти')),tbox,(hintBox=el('div',{class:'hints',style:'display:none'})),(rubBox=el('details',{class:'rubd',style:'display:none'})),awb,lb,res,
     el('div',{class:'ws'},el('div',{class:'pane'},fbar,el('div',{class:'tabs'},tpl,rb,...(PY?[el('button',{class:'g',onclick:()=>py.stop()},'⏹ Зупинити'),tb,el('span',{class:'mu'},'Ctrl+Enter — запуск')]:[el('label',{class:'mu'},ac,' автооновлення'),wb])),ed.host),el('div',{class:'pane'},...(PY?[py.el,tres]:[pv,con,wres]))),cw);
   const DUP='Цю роботу зараз відкрито на іншому пристрої, або доступ закрито. Сеанс завершено.';
   const start=()=>{ref.once('value').then(async s=>{const v=s.val();let k=null;try{k=(await kref.once('value')).val()}catch(e){kOK=false}
       if(k&&k.files)F=filesOf(k,MAIN);else if(v)F=filesOf(v,MAIN);if(v&&v.ini)ini=true;
-      Object.keys(F).forEach(n=>ed.sync(n,F[n]));cur=MAIN;ed.show(cur);drawF();refresh();
+      Object.keys(F).forEach(n=>ed.sync(n,F[n]));cur=MAIN;ed.show(cur);drawF();refresh();hkey();
       const u=pay(true);if(v)u.upd=v.upd||u.upd;ref.update(u);loaded=true;paint();
       if(kOK&&v&&v.files)kref.once('value').then(x=>{if(x.val()&&x.val().files)ref.child('files').remove().catch(()=>{})}).catch(()=>{});
       conn.on('value',c=>{if(c.val()){ref.child('on').onDisconnect().set(false);ref.child('help').onDisconnect().remove();ref.child('on').set(true)}})}).catch(()=>bye(DUP));

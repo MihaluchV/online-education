@@ -189,3 +189,106 @@ function webCheck(F,rules,o){o=o||{};return new Promise(done=>{
 const cPassed=res=>(res||[]).filter(x=>x&&x.ok).length;
 function cView(rules,res){return el('div',{class:'tst'},rules.map((r,k)=>{const x=res[k]||{};
   return el('div',{class:'tsi '+(x.ok?'ok':'bad')},(x.ok?'✅ ':'❌ ')+cLabel(r),!x.ok&&x.w?el('div',{class:'mu'},x.w):'')}))}
+
+/* ---------- перегляд історії набору коду ----------
+   E: записи з hist/{завдання}/{учень} ({k:1,F:[{n,c}]} — повний знімок; {f,p,d,x} — зміна файлу; {op:'mv'|'rm'}; {e:'sub'} — здача).
+   o: {name, web, main, pl (вставки з works.pl), onClose} */
+const hApply=(S,e)=>{if(e.k){const o={};(e.F?Object.values(e.F):[]).forEach(x=>{if(x&&x.n)o[x.n]=x.c||''});return o}
+  if(e.op==='rm'){const o={...S};delete o[e.f];return o}if(e.op==='mv'){const o={...S};o[e.to]=o[e.f];delete o[e.f];return o}
+  if(e.f==null||e.e)return S;const a=S[e.f]||'';return{...S,[e.f]:a.slice(0,e.p||0)+(e.x||'')+a.slice((e.p||0)+(e.d||0))}};
+const hLen=S=>Object.values(S).reduce((a,c)=>a+String(c||'').length,0);
+const hTime=ts=>new Date(ts).toLocaleTimeString('uk',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+function histView(E0,o){o=o||{};
+  const E=(E0?Object.values(E0):[]).filter(e=>e&&e.at).sort((a,b)=>a.at-b.at);
+  const ov=el('div',{class:'modal hv',style:'z-index:60'}),box=el('div',{});ov.append(box);
+  const close=()=>{stop();ov.remove();removeEventListener('keydown',kd,true);if(o.onClose)o.onClose()};
+  const kd=e=>{if(e.key==='Escape'){e.stopPropagation();close()}else if(e.key===' '&&e.target.tagName!=='INPUT'&&e.target.tagName!=='SELECT'){e.preventDefault();toggle()}};
+  if(!E.length){const k0=e=>{if(e.key==='Escape'){e.stopPropagation();c0()}},c0=()=>{ov.remove();removeEventListener('keydown',k0,true);if(o.onClose)o.onClose()};
+    box.append(el('header',{},el('b',{style:'flex:1'},'⏯ Історія набору: '+(o.name||'')),el('button',{class:'g',onclick:c0},'✕ Закрити')),
+      el('div',{class:'tp'},el('div',{class:'mu'},'Історія для цієї роботи не записана. Вона з’являється, коли учень працює з оновленою версією платформи.')));
+    document.body.append(ov);addEventListener('keydown',k0,true);return}
+  /* стани після кожного запису; контрольні точки, щоб швидко перемотувати */
+  const CP={},lens=[];let S={};E.forEach((e,i)=>{S=hApply(S,e);lens.push(hLen(S));if(i%25===0)CP[i]=S});
+  const stateAt=i=>{let j=i-(i%25),s=CP[j];for(let k=j+1;k<=i;k++)s=hApply(s,E[k]);return s};
+  const t0=E[0].at,t1=E[E.length-1].at;
+  /* активний час: проміжки до 2 хв між записами */
+  let act=0;for(let i=1;i<E.length;i++){const g=E[i].at-E[i-1].at;if(g<120000)act+=g}
+  /* «великий фрагмент за раз»: багато символів з'явилося за кілька правок (c — кількість правок у редакторі між збереженнями) */
+  const isBig=e=>{const L=(e.x||'').length;return !e.k&&e.f!=null&&!e.op&&L>=60&&(e.c!=null?e.c<=Math.max(3,L/20):L>=200)};
+  const big=E.map((e,i)=>({e,i})).filter(z=>isBig(z.e));
+  const PL=(o.pl?Object.values(o.pl):[]).filter(x=>x&&x.at);
+  const fmtM=ms=>{const m=Math.round(ms/60000);return m<1?'менше хвилини':m<60?m+' хв':Math.floor(m/60)+' год '+(m%60)+' хв'};
+  /* графік: обсяг коду в часі + позначки */
+  const W=1000,H=70,maxL=Math.max(1,...lens),X=t=>t1>t0?(t-t0)/(t1-t0)*W:W/2,Y=l=>H-4-(l/maxL)*(H-10);
+  const NS='http://www.w3.org/2000/svg',svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox','0 0 '+W+' '+H);svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('class','hvc');
+  const pth=document.createElementNS(NS,'path');pth.setAttribute('d',E.map((e,i)=>(i?'L':'M')+X(e.at).toFixed(1)+' '+Y(lens[i]).toFixed(1)).join(' '));pth.setAttribute('class','hvl');svg.append(pth);
+  const tick=(t,cls,title)=>{const r=document.createElementNS(NS,'rect');r.setAttribute('x',(X(t)-1.5).toFixed(1));r.setAttribute('y','0');r.setAttribute('width','3');r.setAttribute('height',String(H));r.setAttribute('class',cls);
+    const tt=document.createElementNS(NS,'title');tt.textContent=title;r.append(tt);svg.append(r)};
+  E.forEach(e=>{if(e.k)tick(e.at,'hvk','Початок сеансу '+hTime(e.at));if(e.e==='sub')tick(e.at,'hvs','Здано '+hTime(e.at))});
+  big.forEach(z=>tick(z.e.at,'hvb','Великий фрагмент за раз: '+z.e.x.length+' симв. о '+hTime(z.e.at)));
+  PL.forEach(x=>tick(x.at,'hvp','Вставка з іншого джерела ('+(x.n||0)+' симв.) о '+hTime(x.at)));
+  const cur=document.createElementNS(NS,'rect');cur.setAttribute('y','0');cur.setAttribute('width','2');cur.setAttribute('height',String(H));cur.setAttribute('class','hvcur');svg.append(cur);
+  /* керування */
+  let pos=E.length-1,fc=null,timer=null,showPage=false;
+  const rng=el('input',{type:'range',min:0,max:E.length-1,value:pos,style:'flex:1;min-width:160px'}),tl=el('span',{class:'mu',style:'min-width:190px'});
+  const pb=el('button',{style:'flex:0 0 auto;min-width:96px',onclick:()=>toggle()},'▶ Відтворити');
+  const spd=el('select',{style:'width:auto'});[['1','1×'],['4','4×'],['16','16×'],['64','64×']].forEach(([v,t])=>spd.append(el('option',{value:v},t)));spd.value='16';
+  const skip=el('input',{type:'checkbox',style:'width:auto;flex:none'});skip.checked=true;
+  const tabs=el('div',{class:'tabs'}),code=el('pre',{class:'hvcode'}),page=frame('none');page.setAttribute('sandbox','');page.className='hvpage';
+  const pgBtn=o.web?el('button',{class:'g',onclick:()=>{showPage=!showPage;draw()}},'👁 Показати сторінку'):'';
+  const stop=()=>{clearTimeout(timer);timer=null;pb.textContent='▶ Відтворити'};
+  const step=()=>{if(pos>=E.length-1)return stop();const g=E[pos+1].at-E[pos].at,d=Math.max(25,(skip.checked?Math.min(g,1500):g)/(+spd.value));
+    timer=setTimeout(()=>{pos++;draw();if(timer)step()},d)};
+  const toggle=()=>{if(timer)return stop();if(pos>=E.length-1)pos=0;pb.textContent='⏸ Пауза';draw();step()};
+  rng.oninput=()=>{pos=+rng.value;draw()};
+  svg.onclick=ev=>{const r=svg.getBoundingClientRect(),t=t0+(ev.clientX-r.left)/r.width*(t1-t0);let b=0;E.forEach((e,i)=>{if(Math.abs(e.at-t)<Math.abs(E[b].at-t))b=i});pos=b;draw()};
+  const nav=d=>()=>{stop();pos=Math.max(0,Math.min(E.length-1,pos+d));draw()};
+  const draw=()=>{const s=stateAt(pos),e=E[pos],ns=Object.keys(s).sort(ordF);rng.value=pos;cur.setAttribute('x',(X(e.at)-1).toFixed(1));
+    if(e.f&&!e.op&&s[e.f]!==undefined)fc=e.f;if(!fc||!(fc in s))fc=ns.includes(o.main||'')?o.main:ns[0];
+    tl.textContent=hTime(e.at)+' · '+fmtM(e.at-t0)+' від початку · крок '+(pos+1)+' з '+E.length;
+    tabs.textContent='';ns.forEach(n=>tabs.append(el('button',{class:n===fc?'on':'g',onclick:()=>{fc=n;draw()}},n)));if(pgBtn){pgBtn.textContent=showPage?'📝 Показати код':'👁 Показати сторінку';tabs.append(pgBtn)}
+    const txt=s[fc]||'';code.textContent='';
+    if(e.f===fc&&!e.k&&!e.op&&e.x){const a=e.p||0,b=a+e.x.length;code.append(txt.slice(0,a),el('mark',{},txt.slice(a,b)),txt.slice(b));const m=code.querySelector('mark');if(m)setTimeout(()=>{try{m.scrollIntoView({block:'center'})}catch(_){}},0)}
+    else code.append(txt);
+    info.textContent=e.k?'▶ Початок сеансу (повний знімок коду)':e.e==='sub'?'📥 Роботу здано':e.op==='rm'?'🗑 Видалено файл '+e.f:e.op==='mv'?'✏ Перейменовано '+e.f+' → '+e.to:
+      '✎ '+e.f+': '+((e.x||'').length?'+'+(e.x||'').length+' симв.':'')+((e.d||0)?' −'+e.d+' симв.':'')+(isBig(e)?' · ⚠ великий фрагмент за раз ('+(e.c||1)+' правок)':'');
+    page.style.display=showPage?'':'none';code.style.display=showPage?'none':'';if(showPage)page.srcdoc=bundle(s).html};
+  const info=el('div',{class:'mu',style:'min-height:1.4em'});
+  box.append(el('header',{},el('b',{style:'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},'⏯ Історія набору: '+(o.name||'')),el('button',{class:'g',onclick:close},'✕ Закрити')),
+    el('div',{class:'tp',style:'gap:8px'},
+      el('div',{class:'mu'},'Від '+hTime(t0)+' до '+hTime(t1)+' · активна робота: '+fmtM(act)+' · збережень: '+E.filter(e=>!e.k&&!e.e).length+' · сеансів: '+E.filter(e=>e.k).length+
+        (big.length?' · ⚠ великих фрагментів за раз: '+big.length:'')+(PL.length?' · 📋 вставок з інших джерел: '+PL.length:'')),
+      svg,el('div',{class:'mu hvleg'},el('span',{class:'hvlg l'},'обсяг коду'),el('span',{class:'hvlg b'},'великий фрагмент за раз'),el('span',{class:'hvlg p'},'вставка з іншого джерела'),el('span',{class:'hvlg k'},'початок сеансу'),el('span',{class:'hvlg s'},'здача')),
+      el('div',{class:'row',style:'align-items:center'},el('button',{class:'g',style:'flex:0 0 auto',title:'Крок назад',onclick:nav(-1)},'⟨'),pb,el('button',{class:'g',style:'flex:0 0 auto',title:'Крок уперед',onclick:nav(1)},'⟩'),rng,
+        el('label',{class:'mu',style:'display:flex;gap:6px;align-items:center;flex:0 0 auto'},'швидкість',spd),el('label',{class:'mu',style:'display:flex;gap:6px;align-items:center;flex:0 0 auto'},skip,'пропускати паузи')),
+      el('div',{class:'row',style:'align-items:center'},tl,info)),
+    el('div',{class:'hvb2'},tabs,code,page));
+  document.body.append(ov);addEventListener('keydown',kd,true);draw()}
+
+/* ---------- критерії оцінювання ----------
+   tasks.rub = {s: шкала оцінки (12), c: [{id, t: назва, m: макс. балів, a: 1 — підказка з автоперевірки}]}; бали учня — works.rs {id критерію: бали} */
+const rlist=t=>t&&t.rub&&t.rub.c?Object.values(t.rub.c).filter(x=>x&&x.id&&String(x.t||'').trim()&&+x.m>0):[];
+const rScale=t=>Math.max(1,Math.min(100,+(t&&t.rub&&t.rub.s)||12));
+const rMax=C=>Math.round(C.reduce((a,c)=>a+(+c.m||0),0)*100)/100;
+const rHas=v=>v!==undefined&&v!==null&&v!=='';
+const rCalc=(t,rs)=>{const C=rlist(t),M=rMax(C);let S=0,n=0;C.forEach(c=>{const v=rs&&rs[c.id];if(rHas(v)){S+=Math.max(0,Math.min(+c.m,+v||0));n++}});
+  S=Math.round(S*100)/100;return{sum:S,max:M,filled:n,total:C.length,grade:M&&n?Math.max(1,Math.round(S/M*rScale(t))):null}};
+function rubView(t,rs){const C=rlist(t);if(!C.length)return null;const have=rs&&C.some(c=>rHas(rs[c.id]));
+  return el('table',{class:'rubt'},el('tr',{},el('th',{},'Критерій'),el('th',{},have?'Бали':'Макс. балів')),
+    C.map(c=>el('tr',{},el('td',{},c.t),el('td',{},have?(rHas(rs[c.id])?rs[c.id]:'—')+' / '+c.m:String(c.m)))),
+    el('tr',{class:'rubs'},el('td',{},have?'Разом':'Разом (шкала оцінки — '+rScale(t)+')'),el('td',{},have?rCalc(t,rs).sum+' / '+rMax(C):String(rMax(C)))))}
+
+/* ---------- підказки ----------
+   tasks.hints=[{id,t}], tasks.hmode: 'teacher' (відкриває вчитель) | 'self' (учень може відкрити сам), tasks.hr={id:true} — відкрито всім;
+   works.hu={id:true} — вчитель дав особисто, works.hs={id:час} — учень відкрив сам */
+const hlist=t=>t&&t.hints?Object.values(t.hints).filter(x=>x&&x.id&&String(x.t||'').trim()):[];
+const hWho=(t,w,h)=>t&&t.hr&&t.hr[h.id]?'all':w&&w.hu&&w.hu[h.id]?'me':w&&w.hs&&w.hs[h.id]?'self':'';
+/* ---------- варіанти ----------
+   tasks.vars=[{id,x: текст варіанта, tests?: тести Python для цього варіанта}], tasks.vmode: 'list' (за списком класу по черзі) | 'rand' (випадково, сталий для учня), tasks.va={id учня: id варіанта} — вручну */
+const vlist=t=>t&&t.vars?Object.values(t.vars).filter(x=>x&&x.id&&String(x.x||'').trim()):[];
+const hstr=s=>{let h=2166136261;for(const ch of String(s)){h^=ch.codePointAt(0);h=Math.imul(h,16777619)>>>0}return h};
+const varOf=(t,roster,sid,tid)=>{const V=vlist(t);if(!V.length)return null;const m=t.va&&t.va[sid];if(m){const v=V.find(x=>x.id===m);if(v)return v}
+  if(t.vmode==='rand')return V[hstr(sid+'|'+(tid||''))%V.length];
+  const ids=Object.values(roster||{}).filter(r=>r&&r.fn!=null).sort(byName).map(r=>slug(r.fn+' '+r.ln)),k=ids.indexOf(sid);return V[(k<0?hstr(sid):k)%V.length]};
+const vNum=(t,v)=>v?vlist(t).findIndex(x=>x.id===v.id)+1:0;
+const tTests=(t,v)=>v&&tlist(v).length?tlist(v):tlist(t);
