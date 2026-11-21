@@ -141,6 +141,16 @@
         }
       }
     },
+    "code": {
+      "$t": {
+        ".read": "auth != null && root.child('owners').child($t).val() === auth.uid",
+        ".write": "auth != null && root.child('owners').child($t).val() === auth.uid",
+        "$s": {
+          ".read": "auth != null && root.child('works').child($t).child($s).child('u').val() === auth.uid",
+          ".write": "auth != null && root.child('works').child($t).child($s).child('u').val() === auth.uid"
+        }
+      }
+    },
     "collab": {
       "owners": {
         "$uid": {
