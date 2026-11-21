@@ -121,3 +121,71 @@ function pasteView(d){if(!d)return;const L=Object.values(d.pl||{}).sort((a,b)=>(
     L.length?L.map(x=>el('div',{class:'pvi'+(x.b?' b':'')},el('div',{class:'mu'},new Date(x.at||0).toLocaleString('uk',{dateStyle:'short',timeStyle:'medium'})+' · '+(x.f||'')+' · '+(x.n||0)+' симв. · '+(PSK[x.k]||x.k||'')+(x.b?' · ⛔ заблоковано, у код не потрапило':'')),el('pre',{},x.x||''))):el('div',{class:'mu'},'Записів немає.'),
     (d.pc||0)>L.length?el('div',{class:'mu'},'Збережено останні '+L.length+' фрагментів.'):'');
   ov=el('div',{class:'imv',role:'dialog','aria-modal':'true',onclick:e=>{if(e.target===ov)close()}},box);document.body.append(ov);addEventListener('keydown',kd,true)}
+
+/* ---------- автоперевірка веб-сторінок: чек-лист вимог ----------
+   Правило: {k: тип, l: підпис для учня (необов'язково), ...поля}. Базові типи без полів — WBASE. */
+const WBASE={doctype:'Є оголошення <!DOCTYPE html>',lang:'У тегу <html> вказано мову (lang)',title:'Є заголовок сторінки <title>',files:'Усі підключені файли CSS і JS існують',err:'Немає помилок JavaScript'};
+const WKIND={has:'Є елемент(и)',attr:'В елементів є атрибут',text:'Елемент містить текст',css:'Стиль елемента',link:'Підключено файл',click:'Після натискання — результат'};
+const clist=t=>t&&t.checks?Object.values(t.checks).filter(x=>x&&x.k&&(WBASE[x.k]||WKIND[x.k])):[];
+const cLabel=r=>{if(r.l&&String(r.l).trim())return String(r.l).trim();if(WBASE[r.k])return WBASE[r.k];const s='«'+(r.s||'')+'»';
+  return{has:()=>'Є '+(+r.n>1?'щонайменше '+r.n+' ':'')+s,attr:()=>'У '+s+' є атрибут '+(r.a||'')+(r.v?'="'+r.v+'"':''),text:()=>s+' містить текст «'+(r.v||'')+'»',
+    css:()=>'У '+s+' '+(r.p||'')+(r.op==='~'?' містить «'+(r.v||'')+'»':': '+(r.v||'')),link:()=>'Підключено файл '+(r.f||''),
+    click:()=>'Після натискання '+s+(r.inp?' (у «'+r.inp+'» введено «'+(r.val||'')+'»)':'')+' «'+(r.t||'')+'» містить «'+(r.v||'')+'»'}[r.k]()};
+const cValid=r=>!!(WBASE[r.k]||{has:r.s,attr:r.s&&r.a,text:r.s&&r.v,css:r.s&&r.p&&r.v,link:r.f,click:r.s&&r.t&&r.v}[r.k]);
+/* виконується ВСЕРЕДИНІ ізольованої сторінки учня (передається як текст функції); результат — postMessage батькові */
+function WCK(R){
+  var E=window.__WE||[],done=false;
+  var q=function(s){try{return document.querySelectorAll(s)}catch(e){return null}};
+  var tx=function(e){return String(e.innerText||e.textContent||'').replace(/\s+/g,' ').trim()};
+  var sh=function(s){s=String(s);return s.length>70?s.slice(0,70)+'…':s};
+  var low=function(s){return String(s==null?'':s).toLowerCase().trim()};
+  var wait=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+  var one=function(r){
+    if(r.k==='lang'){var lg=document.documentElement.getAttribute('lang');return{ok:!!(lg&&lg.trim()),w:''}}
+    if(r.k==='title')return{ok:!!document.title.trim(),w:''};
+    var L=q(r.s||'');if(L===null)return{ok:false,w:'помилковий селектор «'+r.s+'»'};
+    if(r.k==='has'){var n=Math.max(1,+r.n||1);return{ok:L.length>=n,w:'знайдено: '+L.length}}
+    if(!L.length)return{ok:false,w:'на сторінці немає «'+r.s+'»'};
+    if(r.k==='attr'){var bad=0;for(var i=0;i<L.length;i++){var v=L[i].getAttribute(r.a);if(v===null||(r.v?v.trim()!==String(r.v).trim():!v.trim()))bad++}
+      return{ok:!bad,w:bad?'не виконано для '+bad+' з '+L.length:''}}
+    if(r.k==='text'){for(var j=0;j<L.length;j++)if(low(tx(L[j])).indexOf(low(r.v))>=0)return{ok:true,w:''};return{ok:false,w:'зараз: «'+sh(tx(L[0]))+'»'}}
+    if(r.k==='css'){var e=L[0],p=String(r.p||'').trim().toLowerCase(),cv=getComputedStyle(e).getPropertyValue(p).trim();
+      if(r.op==='~')return{ok:low(cv).indexOf(low(r.v))>=0,w:'зараз: '+(cv||'(не задано)')};
+      var tg=/^(html|body|head)$/i.test(e.tagName)?'div':e.tagName,pr=document.createElement(tg);
+      if(p!=='position')pr.style.setProperty('position','absolute','important');pr.style.setProperty('visibility','hidden','important');pr.style.setProperty(p,String(r.v).trim(),'important');
+      if(!pr.style.getPropertyValue(p))return{ok:false,w:'значення «'+r.v+'» не підходить для '+p};
+      (e.parentNode&&e.parentNode.nodeType===1?e.parentNode:document.body).appendChild(pr);var ev=getComputedStyle(pr).getPropertyValue(p).trim();pr.remove();
+      return{ok:cv===ev,w:'зараз: '+(cv||'(не задано)')}}
+    return{ok:false,w:''}};
+  var go=async function(){if(done)return;done=true;var out={};
+    R.forEach(function(r){if(r.k!=='click'&&r.k!=='err'){try{out[r.i]=one(r)}catch(e){out[r.i]={ok:false,w:'помилка перевірки: '+e.message}}}});
+    for(var k=0;k<R.length;k++){var r=R[k];if(r.k!=='click')continue;
+      try{if(r.inp){var I=q(r.inp);if(!I||!I.length){out[r.i]={ok:false,w:'на сторінці немає поля «'+r.inp+'»'};continue}I[0].value=r.val||'';I[0].dispatchEvent(new Event('input',{bubbles:true}));I[0].dispatchEvent(new Event('change',{bubbles:true}))}
+        var B=q(r.s);if(!B||!B.length){out[r.i]={ok:false,w:'на сторінці немає «'+r.s+'»'};continue}
+        B[0].click();await wait(400);var T=q(r.t);if(!T||!T.length){out[r.i]={ok:false,w:'на сторінці немає «'+r.t+'»'};continue}
+        var t=T[0],tv=('value' in t&&!/^(li|button|meter|progress|data|option)$/i.test(t.tagName)&&t.tagName!=='DIV')?String(t.value):tx(t);
+        out[r.i]={ok:low(tv).indexOf(low(r.v))>=0,w:'зараз: «'+sh(tv)+'»'}}catch(e){out[r.i]={ok:false,w:'помилка: '+e.message}}}
+    R.forEach(function(r){if(r.k==='err')out[r.i]={ok:!E.length,w:E.length?E.length+' пом.: '+sh(E[0]):''}});
+    parent.postMessage({k:'wck',r:out},'*')};
+  if(document.readyState==='complete')setTimeout(go,150);else addEventListener('load',function(){setTimeout(go,150)});setTimeout(go,3000)}
+const reEsc=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+function webCheck(F,rules,o){o=o||{};return new Promise(done=>{
+  const R=rules.map((r,i)=>({...r,i})),out={},src=F['index.html']||'',b=bundle(F);
+  R.forEach(r=>{if(r.k==='doctype')out[r.i]={ok:/^\s*<!doctype\s+html\s*>/i.test(src),w:''};
+    else if(r.k==='files')out[r.i]={ok:!b.miss.length,w:b.miss.length?'не знайдено: '+b.miss.join(', '):''};
+    else if(r.k==='link'){const f=nmOf(String(r.f||'')),css=/\.css$/i.test(f),q='["\']?(\\./)?'+reEsc(f)+'(["\'?#\\s>]|$)';
+      const lk=new RegExp(css?'<link\\b[^>]*\\shref\\s*=\\s*'+q:'<script\\b[^>]*\\ssrc\\s*=\\s*'+q,'i').test(src),has=F[f]!==undefined;
+      out[r.i]={ok:has&&lk,w:!has?'файлу '+f+' немає':!lk?'файл не підключено в index.html':''}}});
+  const dyn=R.filter(r=>!(r.i in out));if(!dyn.length)return done(R.map(r=>out[r.i]));
+  const ifr=el('iframe',{sandbox:'allow-scripts',title:'перевірка',style:'position:fixed;left:-12000px;top:0;width:1024px;height:768px;border:0;opacity:0;pointer-events:none'});
+  let tm=null,over=false;
+  const fin=miss=>{if(over)return;over=true;clearTimeout(tm);removeEventListener('message',h);ifr.remove();done(R.map(r=>out[r.i]||miss))};
+  const h=e=>{if(e.source!==ifr.contentWindow||!e.data||e.data.k!=='wck')return;Object.assign(out,e.data.r||{});fin({ok:false,w:'не перевірено'})};
+  addEventListener('message',h);
+  const pre='<script>window.__WE=[];addEventListener("error",function(e){__WE.push(String(e.message||"помилка"))});addEventListener("unhandledrejection",function(e){__WE.push(String((e.reason&&e.reason.message)||e.reason||"помилка"))});<\/script>';
+  const run='<script>('+WCK.toString()+')('+jsonSafe(dyn)+');<\/script>',c=b.html,m=c.match(/^\s*<!doctype[^>]*>/i);
+  tm=setTimeout(()=>fin({ok:false,w:'сторінка не відповіла за '+Math.round((o.timeout||9000)/1000)+' с (можливо, нескінченний цикл у JavaScript)'}),o.timeout||9000);
+  document.body.append(ifr);ifr.srcdoc=(m?c.slice(0,m[0].length)+pre+c.slice(m[0].length):pre+c)+run})}
+const cPassed=res=>(res||[]).filter(x=>x&&x.ok).length;
+function cView(rules,res){return el('div',{class:'tst'},rules.map((r,k)=>{const x=res[k]||{};
+  return el('div',{class:'tsi '+(x.ok?'ok':'bad')},(x.ok?'✅ ':'❌ ')+cLabel(r),!x.ok&&x.w?el('div',{class:'mu'},x.w):'')}))}

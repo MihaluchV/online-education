@@ -58,6 +58,16 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
   const tres=el('div',{class:'tres',style:'display:none'});let tRun=false,tEng=null;
   const tb=el('button',{class:'g',style:'display:none',onclick:()=>doTests(false)},'🧪 Перевірити');
   const tAvail=()=>PY&&!GUI&&tlist(tk).length>0;
+  /* чек-лист вимог для веб-завдань: перевірка сторінки в ізольованій невидимій рамці */
+  const wres=el('div',{class:'tres',style:'display:none'});let wRun=false;
+  const wb=el('button',{class:'g',style:'display:none',onclick:()=>doWeb(false)},'☑ Перевірити вимоги');
+  const wAvail=()=>!PY&&clist(tk).length>0;
+  const doWeb=async auto=>{if(wRun||!wAvail())return;const C=clist(tk);wRun=true;wb.disabled=true;F[cur]=ed.get();
+    wres.style.display='';wres.textContent='';wres.append(el('div',{class:'mu'},'☑ Перевіряю сторінку…'));
+    const res=await webCheck({...F},C);wRun=false;wb.disabled=false;wres.textContent='';const p=cPassed(res),n=C.length;
+    wres.append(el('button',{class:'g',style:'float:right;padding:2px 8px',title:'Сховати результати',onclick:()=>{wres.style.display='none'}},'✕'),
+      el('div',{class:'banner '+(p===n?'ok':'rt'),style:'margin:0 0 8px'},(p===n?'✅ Усі вимоги виконано: ':'☑ Виконано вимог: ')+p+' з '+n+(auto?' (перевірка під час здачі)':'')),cView(C,res));
+    ref.update({ws:{p,n,at:Date.now(),a:!!auto}}).catch(()=>{})};
   const doTests=async auto=>{if(tRun||!tAvail())return;const T=tlist(tk);tRun=true;tb.disabled=true;F[cur]=ed.get();
     tres.style.display='';tres.textContent='';const ln=el('div',{class:'mu'},'🧪 Готую перевірку…');tres.append(ln);
     if(!tEng)tEng=testEngine();const r=await runTests({eng:tEng,files:{...F},libs:pyLibs(tk),main:MAIN,tests:T,mode:tk.tmode||'exact',limit:tk.tlim||5,onStatus:m=>{ln.textContent='⏳ '+m},onProgress:(a,b)=>{ln.textContent='🧪 Перевірено тестів: '+a+' з '+b+'…'}});
@@ -118,7 +128,7 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
     delete F[n];dirty.delete(n);ed.drop(n);cur=MAIN;ed.show(cur);kput({['files/'+fk(n)]:null});ref.update({upd:Date.now()});drawF();refresh()};
   const onMsg=e=>{if(e.source!==pv.contentWindow||!e.data||e.data.k!=='log')return;con.append(el('div',{class:e.data.t},'› '+e.data.m));con.scrollTop=1e9};
   addEventListener('message',onMsg);
-  const paint=()=>{const exp=isExp(),act=tk&&tk.status==='active'&&!exp,fin=tk&&tk.status==='finished';tb.style.display=tAvail()?'':'none';tb.textContent='🧪 Перевірити ('+tlist(tk).length+' тест.)';
+  const paint=()=>{const exp=isExp(),act=tk&&tk.status==='active'&&!exp,fin=tk&&tk.status==='finished';tb.style.display=tAvail()?'':'none';tb.textContent='🧪 Перевірити ('+tlist(tk).length+' тест.)';wb.style.display=wAvail()?'':'none';wb.textContent='☑ Перевірити вимоги ('+clist(tk).length+')';
     task.className='banner'+(fin?' rt':'');if(imgH._s!==IMG){imgH._s=IMG;imgH.textContent='';if(IMG)imgH.append(imgThumb(IMG))}imgH.style.display=act&&IMG?'':'none';
     task.textContent=tk===undefined?'⏳ Завантаження…':!tk?'Завдання не знайдено або видалене.':exp?'⏱ Час вийшов. Роботу здано автоматично. Очікуйте завершення завдання вчителем.':act?'📝 '+tk.title+(tk.text?'\n'+tk.text:''):fin?'⏹ Завдання «'+tk.title+'» завершено вчителем. Вашу роботу збережено.':'⏳ Завдання «'+tk.title+'» ще не розпочато. Очікуйте, поки вчитель відправить його.';
     const T={submitted:[W.auto?'📥 Роботу здано автоматично після завершення завдання. Очікуйте перевірки.':'📥 Роботу здано. Очікуйте перевірки.',''],checked:['✅ Вчитель перевірив вашу роботу'+(W.grade?'. Оцінка: '+W.grade:'')+(W.fb?'\n'+W.fb:''),'ok'],returned:['↩ Роботу повернено на доопрацювання'+(W.fb?':\n'+W.fb:''),'rt']}[st];
@@ -137,7 +147,7 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
   const submit=()=>{if(!tk||tk.status!=='active'||isExp())return;
     if(st==='submitted'){if(confirm('Скасувати здачу й продовжити роботу?'))ref.update({st:'work',auto:null});return}
     if(st==='checked'||!confirm('Здати роботу вчителю? Після здачі редагування буде заблоковано.'))return;
-    clearTimeout(timer);refresh();ref.update({...pay(true),st:'submitted',sub:Date.now(),auto:null});if(tAvail())doTests(true)};
+    clearTimeout(timer);refresh();ref.update({...pay(true),st:'submitted',sub:Date.now(),auto:null});if(tAvail())doTests(true);if(wAvail())doWeb(true)};
   const leave=()=>{unwatch();if(py)py.dispose();clearInterval(tick);offRef.off('value',offFn);clearTimeout(timer);F[cur]=ed.get();conn.off();tref.off('value',onTask);imRef.off('value',onIm);ref.off('value',onVal);removeEventListener('message',onMsg);document.removeEventListener('visibilitychange',vflush);if(tEng){tEng.dispose();tEng=null}clearTimeout(stimer);
     ref.child('on').onDisconnect().cancel();ref.child('help').onDisconnect().cancel();ref.update({...pay(true),on:false,help:null});home()};
   const offRef=db.ref('.info/serverTimeOffset'),offFn=s=>{off=s.val()||0};offRef.on('value',offFn);
@@ -161,7 +171,7 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
   const wtick=setInterval(check,500);addEventListener('blur',check);addEventListener('focus',check);document.addEventListener('visibilitychange',check);
   const unwatch=()=>{clearInterval(wtick);removeEventListener('blur',check);removeEventListener('focus',check);document.removeEventListener('visibilitychange',check)};
   $app.append(el('header',{},el('b',{},'👤 '+fn+' '+ln),el('span',{class:'mu'},'🏫 '+cname),tm,ctl,status,fsb,hb,cbtn,sb,el('button',{class:'g',onclick:leave},'Вийти')),tbox,awb,lb,res,
-    el('div',{class:'ws'},el('div',{class:'pane'},fbar,el('div',{class:'tabs'},tpl,rb,...(PY?[el('button',{class:'g',onclick:()=>py.stop()},'⏹ Зупинити'),tb,el('span',{class:'mu'},'Ctrl+Enter — запуск')]:[el('label',{class:'mu'},ac,' автооновлення')])),ed.host),el('div',{class:'pane'},...(PY?[py.el,tres]:[pv,con]))),cw);
+    el('div',{class:'ws'},el('div',{class:'pane'},fbar,el('div',{class:'tabs'},tpl,rb,...(PY?[el('button',{class:'g',onclick:()=>py.stop()},'⏹ Зупинити'),tb,el('span',{class:'mu'},'Ctrl+Enter — запуск')]:[el('label',{class:'mu'},ac,' автооновлення'),wb])),ed.host),el('div',{class:'pane'},...(PY?[py.el,tres]:[pv,con,wres]))),cw);
   const DUP='Цю роботу зараз відкрито на іншому пристрої, або доступ закрито. Сеанс завершено.';
   const start=()=>{ref.once('value').then(async s=>{const v=s.val();let k=null;try{k=(await kref.once('value')).val()}catch(e){kOK=false}
       if(k&&k.files)F=filesOf(k,MAIN);else if(v)F=filesOf(v,MAIN);if(v&&v.ini)ini=true;

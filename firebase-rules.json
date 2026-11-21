@@ -141,6 +141,10 @@
           "ts": {
             ".write": "auth != null && data.parent().child('u').val() === auth.uid",
             ".validate": "newData.hasChildren(['p','n']) && newData.child('p').isNumber() && newData.child('n').isNumber()"
+          },
+          "ws": {
+            ".write": "auth != null && data.parent().child('u').val() === auth.uid",
+            ".validate": "newData.hasChildren(['p','n']) && newData.child('p').isNumber() && newData.child('n').isNumber()"
           }
         }
       }
