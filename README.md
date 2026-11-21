@@ -2,7 +2,7 @@
 
 Онлайн-платформа для спільної одночасної роботи класу над практичними завданнями з веб-дизайну (HTML, CSS, JavaScript) та програмування (Python). Учні пишуть код у браузері й одразу бачать результат, а вчитель у реальному часі бачить екрани всіх учнів, спілкується з ними в чаті, перевіряє роботи й веде журнал оцінок.
 
-Це статичний сайт (сторінка `index.html`, стилі й скрипти в папках `css/` і `js/`), який працює на безкоштовному GitHub Pages. Окремого сервера немає: дані зберігає Firebase (Realtime Database + Authentication).
+Це статичний сайт (сторінка `index.html` і поруч з нею файл стилів та кілька файлів скриптів, без папок), який працює на безкоштовному GitHub Pages. Окремого сервера немає: дані зберігає Firebase (Realtime Database + Authentication).
 
 > Інтерфейс українською мовою.
 
@@ -71,8 +71,8 @@
 5. **Realtime Database → Rules**: вставте вміст файлу [`firebase-rules.json`](firebase-rules.json) і натисніть **Publish**.
 6. (За бажанням) **Authentication → Templates**: мова листів «Українська», назва відправника.
 
-### 2. Налаштування `js/config.js`
-Відкрийте `js/config.js` і замініть значення:
+### 2. Налаштування `config.js`
+Відкрийте `config.js` і замініть значення:
 
 ```js
 const CFG={
@@ -89,22 +89,22 @@ const CFG={
 > `apiKey` у веб-конфігурації Firebase не є секретом, його видно кожному відвідувачу сторінки. Захист даних забезпечують **правила бази** з `firebase-rules.json`.
 
 ### 3. GitHub Pages
-Структура репозиторію:
+Усі файли лежать у корені репозиторію, без папок:
 
 ```
 index.html          — каркас сторінки
-css/style.css       — стилі
-js/config.js        — ваш firebaseConfig (змінюєте лише ви)
-js/qrcode.js        — генератор QR-кодів
-js/core.js          — спільні функції (збирання сторінки учня, редактор, чат, зображення, вставки)
-js/python.js        — Python у браузері та сумісний режим tkinter
-js/student.js       — сторінка учня
-js/teacher.js       — кабінет вчителя
-js/main.js          — запуск
+style.css           — стилі
+config.js           — ваш firebaseConfig (змінюєте лише ви)
+qrcode.js           — генератор QR-кодів
+core.js             — спільні функції (збирання сторінки учня, редактор, чат, зображення, вставки)
+python.js           — Python у браузері та сумісний режим tkinter
+student.js          — сторінка учня
+teacher.js          — кабінет вчителя
+main.js             — запуск
 firebase-rules.json — правила бази (публікуються в консолі Firebase, на сайті не потрібні)
 ```
 
-Щоб завантажити через сайт GitHub: **Add file → Upload files** і перетягніть у вікно файл `index.html` разом із папками `css` і `js` (GitHub зберігає папки при перетягуванні).
+Щоб завантажити через сайт GitHub: **Add file → Upload files → choose your files**, виділіть усі файли разом (Ctrl+A у вікні вибору) і натисніть **Commit changes**.
 
 У репозиторії: **Settings → Pages → Branch: `main`, папка `/ (root)`**. Через 1–2 хвилини сайт з’явиться за адресою:
 
@@ -166,9 +166,9 @@ firebase-rules.json — правила бази (публікуються в к�
 ---
 
 ## Оновлення
-1. Завантажте в репозиторій нові файли з папок `css/`, `js/` та `index.html`. Файл **`js/config.js` не замінюйте**: у ньому ваш `firebaseConfig`.
-   - Посилання на скрипти в `index.html` мають мітку версії (`?v=…`), тому після оновлення браузери учнів беруть нові файли, а не старі з кешу. Якщо оновлюєте лише один js-файл без нового `index.html`, учням варто оновити сторінку з Ctrl+F5.
-   - Перехід з однофайлової версії: замініть старий `index.html` новим, додайте папки `css` і `js`, а свій `firebaseConfig` перенесіть зі старого файлу в `js/config.js`.
+1. Завантажте в репозиторій нові файли (**Add file → Upload files**). Файл **`config.js` не замінюйте**: у ньому ваш `firebaseConfig`.
+   - Посилання на скрипти в `index.html` мають мітку версії (`?v=…`), тому після оновлення браузери учнів беруть нові файли, а не старі з кешу. Якщо оновлюєте лише один `.js`-файл без нового `index.html`, учням варто оновити сторінку з Ctrl+F5.
+   - Перехід з однофайлової версії: замініть старий `index.html` новим і додайте решту файлів; свій `firebaseConfig` перенесіть зі старого файлу в `config.js`.
 2. Якщо змінився `firebase-rules.json`, опублікуйте правила заново: **Realtime Database → Rules → Publish**. Робіть це поза уроком: старі сторінки з новими правилами, і навпаки, можуть працювати неповністю.
 
 ---
@@ -196,7 +196,7 @@ firebase-rules.json — правила бази (публікуються в к�
 | Симптом | Що перевірити |
 |---|---|
 | На екрані лише код | відкрито `github.com/…/blob/…` замість адреси GitHub Pages |
-| Порожня сторінка | вставлено `firebaseConfig` у `js/config.js`; завантажено папки `css` і `js` поруч з `index.html`; F12 → Console (червоні повідомлення) |
+| Порожня сторінка | вставлено `firebaseConfig` у `config.js`; усі файли `.js` і `style.css` лежать поруч з `index.html`; F12 → Console (червоні повідомлення) |
 | «Вхід для учнів не налаштовано» | у Firebase не ввімкнено **Anonymous** |
 | «У Firebase не ввімкнено вхід за email/паролем» | ввімкніть **Email/Password** |
 | `PERMISSION_DENIED` у консолі | опубліковано правила з `firebase-rules.json` і оновлено `index.html` |
@@ -211,6 +211,6 @@ firebase-rules.json — правила бази (публікуються в к�
 - [Firebase JavaScript SDK](https://firebase.google.com/docs/web/setup) (Apache-2.0) — база даних та автентифікація.
 - [CodeMirror 5](https://codemirror.net/5/) (MIT) — редактор коду, підключається з CDN.
 - [Pyodide](https://pyodide.org/) (MPL-2.0) — Python у браузері, підключається з CDN `cdn.jsdelivr.net` (версія 0.29.5: Python 3.13, numpy 2.2, pandas 2.3).
-- [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) © Kazuhiko Arase (MIT) — файл `js/qrcode.js`.
+- [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) © Kazuhiko Arase (MIT) — файл `qrcode.js`.
 
 Ліцензію самого проєкту додайте файлом `LICENSE` на власний розсуд.
