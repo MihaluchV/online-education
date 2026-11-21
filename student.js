@@ -54,6 +54,19 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
   const runWeb=()=>{F[cur]=ed.get();con.textContent='';pv.srcdoc=buildDoc(bundle(F))};
   const py=PY?mkPy({files:()=>{F[cur]=ed.get();return F},libs:()=>pyLibs(tk),main:()=>MAIN,gui:()=>GUI,onDone:r=>{ref.update({out:String(r.out||'').slice(0,3000)}).catch(()=>{})}}):null;
   const runManual=()=>PY?py.run():runWeb(),refresh=()=>{if(!PY)runWeb()};
+  /* автоперевірка тестами (лише Python без tkinter): результат бачить учень, а вчитель — підсумок на картці */
+  const tres=el('div',{class:'tres',style:'display:none'});let tRun=false,tEng=null;
+  const tb=el('button',{class:'g',style:'display:none',onclick:()=>doTests(false)},'🧪 Перевірити');
+  const tAvail=()=>PY&&!GUI&&tlist(tk).length>0;
+  const doTests=async auto=>{if(tRun||!tAvail())return;const T=tlist(tk);tRun=true;tb.disabled=true;F[cur]=ed.get();
+    tres.style.display='';tres.textContent='';const ln=el('div',{class:'mu'},'🧪 Готую перевірку…');tres.append(ln);
+    if(!tEng)tEng=testEngine();const r=await runTests({eng:tEng,files:{...F},libs:pyLibs(tk),main:MAIN,tests:T,mode:tk.tmode||'exact',limit:tk.tlim||5,onStatus:m=>{ln.textContent='⏳ '+m},onProgress:(a,b)=>{ln.textContent='🧪 Перевірено тестів: '+a+' з '+b+'…'}});
+    tRun=false;tb.disabled=false;tres.textContent='';
+    const x=el('button',{class:'g',style:'float:right;padding:2px 8px',title:'Сховати результати',onclick:()=>{tres.style.display='none'}},'✕');
+    if(r.fatal){tres.append(x,el('div',{class:'banner rt',style:'margin:0'},'Не вдалося запустити Python для перевірки: '+r.fatal));return}
+    const p=tPassed(r),n=T.length;
+    tres.append(x,el('div',{class:'banner '+(p===n?'ok':'rt'),style:'margin:0 0 8px'},(p===n?'✅ Усі тести пройдено: ':'🧪 Пройдено тестів: ')+p+' з '+n+(auto?' (перевірка під час здачі)':'')),testView(T,r.results,false));
+    ref.update({ts:{p,n,at:Date.now(),a:!!auto}}).catch(()=>{})};
   const ed=mkEditor(true,()=>runManual());
   const hb=el('button',{class:'g',onclick:()=>ref.update({help:W.help?null:firebase.database.ServerValue.TIMESTAMP})},'✋ Потрібна допомога');
   const awb=el('div',{class:'banner rt',style:'display:none'}),lb=el('div',{class:'banner rt',style:'display:none'}),ctl=el('span',{class:'mu'}),
@@ -105,7 +118,7 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
     delete F[n];dirty.delete(n);ed.drop(n);cur=MAIN;ed.show(cur);kput({['files/'+fk(n)]:null});ref.update({upd:Date.now()});drawF();refresh()};
   const onMsg=e=>{if(e.source!==pv.contentWindow||!e.data||e.data.k!=='log')return;con.append(el('div',{class:e.data.t},'› '+e.data.m));con.scrollTop=1e9};
   addEventListener('message',onMsg);
-  const paint=()=>{const exp=isExp(),act=tk&&tk.status==='active'&&!exp,fin=tk&&tk.status==='finished';
+  const paint=()=>{const exp=isExp(),act=tk&&tk.status==='active'&&!exp,fin=tk&&tk.status==='finished';tb.style.display=tAvail()?'':'none';tb.textContent='🧪 Перевірити ('+tlist(tk).length+' тест.)';
     task.className='banner'+(fin?' rt':'');if(imgH._s!==IMG){imgH._s=IMG;imgH.textContent='';if(IMG)imgH.append(imgThumb(IMG))}imgH.style.display=act&&IMG?'':'none';
     task.textContent=tk===undefined?'⏳ Завантаження…':!tk?'Завдання не знайдено або видалене.':exp?'⏱ Час вийшов. Роботу здано автоматично. Очікуйте завершення завдання вчителем.':act?'📝 '+tk.title+(tk.text?'\n'+tk.text:''):fin?'⏹ Завдання «'+tk.title+'» завершено вчителем. Вашу роботу збережено.':'⏳ Завдання «'+tk.title+'» ще не розпочато. Очікуйте, поки вчитель відправить його.';
     const T={submitted:[W.auto?'📥 Роботу здано автоматично після завершення завдання. Очікуйте перевірки.':'📥 Роботу здано. Очікуйте перевірки.',''],checked:['✅ Вчитель перевірив вашу роботу'+(W.grade?'. Оцінка: '+W.grade:'')+(W.fb?'\n'+W.fb:''),'ok'],returned:['↩ Роботу повернено на доопрацювання'+(W.fb?':\n'+W.fb:''),'rt']}[st];
@@ -124,8 +137,8 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
   const submit=()=>{if(!tk||tk.status!=='active'||isExp())return;
     if(st==='submitted'){if(confirm('Скасувати здачу й продовжити роботу?'))ref.update({st:'work',auto:null});return}
     if(st==='checked'||!confirm('Здати роботу вчителю? Після здачі редагування буде заблоковано.'))return;
-    clearTimeout(timer);refresh();ref.update({...pay(true),st:'submitted',sub:Date.now(),auto:null})};
-  const leave=()=>{unwatch();if(py)py.dispose();clearInterval(tick);offRef.off('value',offFn);clearTimeout(timer);F[cur]=ed.get();conn.off();tref.off('value',onTask);imRef.off('value',onIm);ref.off('value',onVal);removeEventListener('message',onMsg);document.removeEventListener('visibilitychange',vflush);clearTimeout(stimer);
+    clearTimeout(timer);refresh();ref.update({...pay(true),st:'submitted',sub:Date.now(),auto:null});if(tAvail())doTests(true)};
+  const leave=()=>{unwatch();if(py)py.dispose();clearInterval(tick);offRef.off('value',offFn);clearTimeout(timer);F[cur]=ed.get();conn.off();tref.off('value',onTask);imRef.off('value',onIm);ref.off('value',onVal);removeEventListener('message',onMsg);document.removeEventListener('visibilitychange',vflush);if(tEng){tEng.dispose();tEng=null}clearTimeout(stimer);
     ref.child('on').onDisconnect().cancel();ref.child('help').onDisconnect().cancel();ref.update({...pay(true),on:false,help:null});home()};
   const offRef=db.ref('.info/serverTimeOffset'),offFn=s=>{off=s.val()||0};offRef.on('value',offFn);
   const tick=setInterval(()=>{if(!tk||tk.status!=='active'||!tk.endsAt){tm.style.display='none';expSeen=false;return}
@@ -134,7 +147,7 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
       if(!expSeen){expSeen=true;if(st!=='submitted'&&st!=='checked'){clearTimeout(timer);refresh();ref.update({...pay(true),st:'submitted',sub:sn(),auto:true})}paint()}return}
     if(expSeen){expSeen=false;paint()}
     tm.textContent='⏱ '+fmtT(r);tm.className='tmr'+(r<=60000?' low':'')},1000);
-  const bye=msg=>{if(gone)return;gone=true;unwatch();if(py)py.dispose();clearInterval(tick);offRef.off('value',offFn);clearTimeout(timer);conn.off();tref.off('value',onTask);imRef.off('value',onIm);ref.off('value',onVal);removeEventListener('message',onMsg);document.removeEventListener('visibilitychange',vflush);clearTimeout(stimer);
+  const bye=msg=>{if(gone)return;gone=true;unwatch();if(py)py.dispose();clearInterval(tick);offRef.off('value',offFn);clearTimeout(timer);conn.off();tref.off('value',onTask);imRef.off('value',onIm);ref.off('value',onVal);removeEventListener('message',onMsg);document.removeEventListener('visibilitychange',vflush);if(tEng){tEng.dispose();tEng=null}clearTimeout(stimer);
     ref.child('on').onDisconnect().cancel();home();setTimeout(()=>alert(msg),50)};
   /* --- контроль виходів зі сторінки (за налаштуваннями завдання) --- */
   const watch=()=>!!(loaded&&tk&&tk.status==='active'&&!isExp()&&(tk.trk||tk.wrn||tk.lck)&&st!=='submitted'&&st!=='checked');
@@ -148,7 +161,7 @@ function student(o,t,fn,ln,cid,cname,ttype,gui){
   const wtick=setInterval(check,500);addEventListener('blur',check);addEventListener('focus',check);document.addEventListener('visibilitychange',check);
   const unwatch=()=>{clearInterval(wtick);removeEventListener('blur',check);removeEventListener('focus',check);document.removeEventListener('visibilitychange',check)};
   $app.append(el('header',{},el('b',{},'👤 '+fn+' '+ln),el('span',{class:'mu'},'🏫 '+cname),tm,ctl,status,fsb,hb,cbtn,sb,el('button',{class:'g',onclick:leave},'Вийти')),tbox,awb,lb,res,
-    el('div',{class:'ws'},el('div',{class:'pane'},fbar,el('div',{class:'tabs'},tpl,rb,...(PY?[el('button',{class:'g',onclick:()=>py.stop()},'⏹ Зупинити'),el('span',{class:'mu'},'Ctrl+Enter — запуск')]:[el('label',{class:'mu'},ac,' автооновлення')])),ed.host),el('div',{class:'pane'},...(PY?[py.el]:[pv,con]))),cw);
+    el('div',{class:'ws'},el('div',{class:'pane'},fbar,el('div',{class:'tabs'},tpl,rb,...(PY?[el('button',{class:'g',onclick:()=>py.stop()},'⏹ Зупинити'),tb,el('span',{class:'mu'},'Ctrl+Enter — запуск')]:[el('label',{class:'mu'},ac,' автооновлення')])),ed.host),el('div',{class:'pane'},...(PY?[py.el,tres]:[pv,con]))),cw);
   const DUP='Цю роботу зараз відкрито на іншому пристрої, або доступ закрито. Сеанс завершено.';
   const start=()=>{ref.once('value').then(async s=>{const v=s.val();let k=null;try{k=(await kref.once('value')).val()}catch(e){kOK=false}
       if(k&&k.files)F=filesOf(k,MAIN);else if(v)F=filesOf(v,MAIN);if(v&&v.ini)ini=true;

@@ -137,6 +137,10 @@
               ".write": "auth != null && !data.exists() && data.parent().parent().child('u').val() === auth.uid",
               ".validate": "newData.hasChildren(['at','n','x']) && newData.child('x').isString() && newData.child('x').val().length <= 1500 && newData.child('n').isNumber()"
             }
+          },
+          "ts": {
+            ".write": "auth != null && data.parent().child('u').val() === auth.uid",
+            ".validate": "newData.hasChildren(['p','n']) && newData.child('p').isNumber() && newData.child('n').isNumber()"
           }
         }
       }
